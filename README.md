@@ -43,6 +43,9 @@ Run only the web app:
 make web
 ```
 
+To replace the offline keyword parser with OpenAI Structured Outputs, follow
+[`docs/openai-intent-parser.md`](docs/openai-intent-parser.md).
+
 Default local URLs:
 
 - API: `http://localhost:8000`
@@ -63,4 +66,3 @@ Python tests use `pytest`. Frontend tests use `vitest`.
 - The LLM layer should not perform causal calculations.
 - Every production answer should be backed by structured causal output, evidence metadata, and model version information.
 - Local development uses mocks and does not require paid external services.
-

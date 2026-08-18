@@ -1,4 +1,22 @@
+from typing import Protocol
+
 from llm_orchestrator.models import IntentType, StructuredQuery, Target
+
+
+class IntentParser(Protocol):
+    def parse(self, message: str) -> StructuredQuery: ...
+
+
+class IntentParserError(RuntimeError):
+    """Base error raised when a message cannot be converted into a structured query."""
+
+
+class IntentParserUnavailableError(IntentParserError):
+    """Raised when an external parser cannot return a usable result."""
+
+
+class InvalidIntentTargetError(IntentParserError):
+    """Raised when a parser selects a node outside the active causal graph."""
 
 
 class MockIntentParser:
@@ -27,3 +45,17 @@ class MockIntentParser:
             target=Target(node_id="qc_productivity", entity_type="vessel", entity_id="vessel_a"),
             raw_message=message,
         )
+
+
+class FallbackIntentParser:
+    """Use a deterministic parser only when the primary external service is unavailable."""
+
+    def __init__(self, primary: IntentParser, fallback: IntentParser) -> None:
+        self._primary = primary
+        self._fallback = fallback
+
+    def parse(self, message: str) -> StructuredQuery:
+        try:
+            return self._primary.parse(message)
+        except IntentParserUnavailableError:
+            return self._fallback.parse(message)

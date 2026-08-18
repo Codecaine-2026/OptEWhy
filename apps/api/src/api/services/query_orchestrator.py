@@ -4,12 +4,12 @@ from api.services.explanation_builder import ExplanationBuilder
 from api.services.visualization_builder import VisualizationBuilder
 from causal_engine.analysis import find_dominant_paths
 from causal_engine.loops import detect_feedback_loops
-from llm_orchestrator.parsers import MockIntentParser
+from llm_orchestrator.parsers import IntentParser
 
 
 class QueryOrchestrator:
-    def __init__(self) -> None:
-        self._parser = MockIntentParser()
+    def __init__(self, parser: IntentParser) -> None:
+        self._parser = parser
         self._explanation_builder = ExplanationBuilder()
         self._visualization_builder = VisualizationBuilder()
 
@@ -25,8 +25,24 @@ class QueryOrchestrator:
         causal_result: dict[str, object] = {
             "targetNodeId": target_node_id,
             "observedDelta": snapshot.node_values.get(target_node_id, 0.0),
-            "dominantPaths": [path.model_dump(by_alias=True) for path in paths],
-            "feedbackLoops": [loop.model_dump(by_alias=True) for loop in loops],
+            "dominantPaths": [
+                {
+                    "path": path.path,
+                    "contributionRatio": path.contribution_ratio,
+                    "signedImpact": path.signed_impact,
+                    "confidence": path.confidence,
+                }
+                for path in paths
+            ],
+            "feedbackLoops": [
+                {
+                    "nodes": loop.nodes,
+                    "loopType": loop.loop_type,
+                    "strength": loop.strength,
+                    "confidence": loop.confidence,
+                }
+                for loop in loops
+            ],
         }
         evidence: list[dict[str, object]] = []
 

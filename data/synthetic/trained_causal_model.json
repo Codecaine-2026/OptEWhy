@@ -1,0 +1,180 @@
+{
+  "model_type": "static_fcm",
+  "graph_id": "graph_terminal_alpha_reference",
+  "terminal_id": "terminal_alpha",
+  "equation": "X(t+1) = tanh(X(t) + X(t)W)",
+  "source_dataset": "data/synthetic/sample_causal_training.csv",
+  "training_rows": 900,
+  "excluded_intervention_rows": 100,
+  "ridge_alpha": 0.001,
+  "overall_rmse": 0.011993,
+  "weight_mae": 0.000816,
+  "target_rmse": {
+    "truck_travel_time": 0.011632,
+    "qc_productivity": 0.012588,
+    "vessel_turnaround_time": 0.011273,
+    "qc_waiting": 0.0117,
+    "yard_density": 0.012074,
+    "berth_occupancy": 0.012625
+  },
+  "nodes": [
+    {
+      "id": "weather_severity",
+      "label": "Weather Severity",
+      "node_type": "external_context",
+      "subsystem": "external_context"
+    },
+    {
+      "id": "vessel_arrival_delay",
+      "label": "Vessel Arrival Delay",
+      "node_type": "external_context",
+      "subsystem": "vessel_operations"
+    },
+    {
+      "id": "berth_occupancy",
+      "label": "Berth Occupancy",
+      "node_type": "state_kpi",
+      "subsystem": "berth"
+    },
+    {
+      "id": "yard_density",
+      "label": "Yard Density",
+      "node_type": "state_kpi",
+      "subsystem": "yard"
+    },
+    {
+      "id": "truck_travel_time",
+      "label": "Internal Truck Travel Time",
+      "node_type": "delay_factor",
+      "subsystem": "internal_transport"
+    },
+    {
+      "id": "qc_waiting",
+      "label": "QC Waiting",
+      "node_type": "delay_factor",
+      "subsystem": "quay"
+    },
+    {
+      "id": "qc_productivity",
+      "label": "QC Productivity",
+      "node_type": "performance_kpi",
+      "subsystem": "quay"
+    },
+    {
+      "id": "vessel_turnaround_time",
+      "label": "Vessel Turnaround Time",
+      "node_type": "performance_kpi",
+      "subsystem": "vessel_operations"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_weather_to_truck_travel_time",
+      "source_node_id": "weather_severity",
+      "target_node_id": "truck_travel_time",
+      "base_weight": 0.237919,
+      "polarity": "positive",
+      "ground_truth_weight": 0.24,
+      "absolute_error": 0.002081
+    },
+    {
+      "id": "edge_yard_density_to_truck_travel_time",
+      "source_node_id": "yard_density",
+      "target_node_id": "truck_travel_time",
+      "base_weight": 0.57933,
+      "polarity": "positive",
+      "ground_truth_weight": 0.58,
+      "absolute_error": 0.00067
+    },
+    {
+      "id": "edge_weather_to_qc_productivity",
+      "source_node_id": "weather_severity",
+      "target_node_id": "qc_productivity",
+      "base_weight": -0.178638,
+      "polarity": "negative",
+      "ground_truth_weight": -0.18,
+      "absolute_error": 0.001362
+    },
+    {
+      "id": "edge_qc_waiting_to_qc_productivity",
+      "source_node_id": "qc_waiting",
+      "target_node_id": "qc_productivity",
+      "base_weight": -0.619497,
+      "polarity": "negative",
+      "ground_truth_weight": -0.62,
+      "absolute_error": 0.000503
+    },
+    {
+      "id": "edge_weather_to_vessel_turnaround_time",
+      "source_node_id": "weather_severity",
+      "target_node_id": "vessel_turnaround_time",
+      "base_weight": 0.220116,
+      "polarity": "positive",
+      "ground_truth_weight": 0.22,
+      "absolute_error": 0.000116
+    },
+    {
+      "id": "edge_berth_occupancy_to_vessel_turnaround_time",
+      "source_node_id": "berth_occupancy",
+      "target_node_id": "vessel_turnaround_time",
+      "base_weight": 0.339222,
+      "polarity": "positive",
+      "ground_truth_weight": 0.34,
+      "absolute_error": 0.000778
+    },
+    {
+      "id": "edge_qc_waiting_to_vessel_turnaround_time",
+      "source_node_id": "qc_waiting",
+      "target_node_id": "vessel_turnaround_time",
+      "base_weight": 0.360573,
+      "polarity": "positive",
+      "ground_truth_weight": 0.36,
+      "absolute_error": 0.000573
+    },
+    {
+      "id": "edge_qc_productivity_to_vessel_turnaround_time",
+      "source_node_id": "qc_productivity",
+      "target_node_id": "vessel_turnaround_time",
+      "base_weight": -0.520332,
+      "polarity": "negative",
+      "ground_truth_weight": -0.52,
+      "absolute_error": 0.000332
+    },
+    {
+      "id": "edge_arrival_delay_to_qc_waiting",
+      "source_node_id": "vessel_arrival_delay",
+      "target_node_id": "qc_waiting",
+      "base_weight": 0.301963,
+      "polarity": "positive",
+      "ground_truth_weight": 0.3,
+      "absolute_error": 0.001963
+    },
+    {
+      "id": "edge_truck_travel_time_to_qc_waiting",
+      "source_node_id": "truck_travel_time",
+      "target_node_id": "qc_waiting",
+      "base_weight": 0.549455,
+      "polarity": "positive",
+      "ground_truth_weight": 0.55,
+      "absolute_error": 0.000545
+    },
+    {
+      "id": "edge_berth_occupancy_to_yard_density",
+      "source_node_id": "berth_occupancy",
+      "target_node_id": "yard_density",
+      "base_weight": 0.419705,
+      "polarity": "positive",
+      "ground_truth_weight": 0.42,
+      "absolute_error": 0.000295
+    },
+    {
+      "id": "edge_qc_waiting_to_berth_occupancy",
+      "source_node_id": "qc_waiting",
+      "target_node_id": "berth_occupancy",
+      "base_weight": 0.279424,
+      "polarity": "positive",
+      "ground_truth_weight": 0.28,
+      "absolute_error": 0.000576
+    }
+  ]
+}
