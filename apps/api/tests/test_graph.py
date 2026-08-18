@@ -9,11 +9,14 @@ def test_current_graph_returns_expanded_reference_graph() -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert len(payload["nodes"]) == 8
-    assert len(payload["edges"]) == 12
     assert {node["id"] for node in payload["nodes"]} >= {
         "weather_severity",
         "berth_occupancy",
-        "vessel_arrival_delay",
+        "import_dwell_time",
+        "gate_throughput",
+        "chassis_availability",
+        "qc_productivity",
+        "truck_turn_time",
         "vessel_turnaround_time",
     }
+    assert len(payload["edges"]) >= 30

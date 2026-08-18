@@ -1,42 +1,40 @@
 # Reference Causal Graph
 
-The executable prototype graph contains eight nodes and twelve directed edges.
+The executable reference graph models structural port causality across external demand,
+landside gate flow, yard congestion, quay productivity, and vessel outcomes.
 
-```mermaid
-flowchart LR
-    W[Weather Severity]
-    A[Vessel Arrival Delay]
-    B[Berth Occupancy]
-    Y[Yard Density]
-    T[Truck Travel Time]
-    QW[QC Waiting]
-    QP[QC Productivity]
-    VT[Vessel Turnaround Time]
+Key node groups:
 
-    W -->|+0.24| T
-    W -->|-0.18| QP
-    W -->|+0.22| VT
-    A -->|+0.30| QW
-    B -->|+0.42| Y
-    B -->|+0.34| VT
-    Y -->|+0.58| T
-    T -->|+0.55| QW
-    QW -->|-0.62| QP
-    QW -->|+0.28| B
-    QW -->|+0.36| VT
-    QP -->|-0.52| VT
-```
+- External and demand: `import_volume_pressure`, `vessel_bunching`, `weather_severity`
+- Landside and gate: `gate_throughput`, `gate_queue_length`, `truck_arrival_peaking`,
+  `truck_appointment_compliance`, `document_error_rate`, `gate_exception_rate`,
+  `chassis_availability`, `warehouse_capacity_pressure`
+- Yard: `import_dwell_time`, `yard_density`, `yard_rehandle_rate`,
+  `yard_crane_availability`, `empty_container_imbalance`
+- Quay and vessel: `berth_occupancy`, `truck_travel_time`, `qc_waiting`,
+  `qc_productivity`, `crane_equipment_availability`, `labor_availability`,
+  `berth_productivity`, `vessel_turnaround_time`
 
-The positive cycle below represents a reinforcing congestion loop:
+The graph keeps immediate KPI relationships, such as `qc_waiting -> qc_productivity`,
+but it also includes upstream structural paths. For example, a low QC productivity case
+can be explained as surface QC waiting while the true root cause is chassis shortage,
+import dwell, yard density, and rehandles.
+
+## Structural Loops
+
+The graph includes a berth-yard-quay reinforcing loop:
 
 ```text
-QC Waiting
-→ Berth Occupancy
-→ Yard Density
-→ Truck Travel Time
-→ QC Waiting
+berth_occupancy -> yard_density -> truck_travel_time -> qc_waiting -> berth_occupancy
 ```
 
-Weather severity and vessel arrival delay are external context nodes. Vessel turnaround time is the broad outcome KPI; QC productivity remains an intermediate performance KPI.
+It also includes a landside-yard pickup loop:
 
-The weights are synthetic ground truth for demonstrating propagation and weight recovery. They are not calibrated for a real terminal.
+```text
+gate_throughput down -> import_dwell_time up -> yard_density up
+-> truck_turn_time up -> gate_throughput down
+```
+
+These loops are structural hypotheses for explanation and scenario simulation. The
+weights are synthetic ground truth for demonstration and training mechanics; they are
+not calibrated proof of real terminal causality.

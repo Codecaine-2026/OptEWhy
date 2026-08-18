@@ -13,6 +13,15 @@ class DocumentMetadata(BaseModel):
     time_end: datetime | None = None
     subsystem: str | None = None
     tags: list[str] = Field(default_factory=list)
+    source_title: str | None = None
+    source_url: str | None = None
+    publisher: str | None = None
+    published_date: str | None = None
+    evidence_scope: str | None = None
+    claim_type: str | None = None
+    related_nodes: list[str] = Field(default_factory=list)
+    related_edges: list[str] = Field(default_factory=list)
+    scenario_ids: list[str] = Field(default_factory=list)
 
 
 class DocumentChunk(BaseModel):
@@ -42,4 +51,3 @@ class EvidenceResult(BaseModel):
     citation: Citation
     text: str
     metadata: DocumentMetadata
-
