@@ -1,7 +1,4 @@
-type CopilotApiResponse = {
-  answer: string;
-  intent: string;
-};
+import type { QueryResponse } from "./types";
 
 type ApiErrorResponse = {
   detail?: string;
@@ -27,13 +24,10 @@ export async function submitCopilotQuery(message: string) {
     throw new Error(error.detail ?? `Copilot request failed with status ${response.status}`);
   }
 
-  const payload = (await response.json()) as CopilotApiResponse;
+  const payload = (await response.json()) as QueryResponse;
   if (!payload.answer) {
     throw new Error("Copilot returned an empty answer");
   }
 
-  return {
-    answer: payload.answer,
-    intent: payload.intent
-  };
+  return payload;
 }

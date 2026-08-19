@@ -12,7 +12,27 @@ describe("submitCopilotQuery", () => {
       status: 200,
       json: async () => ({
         answer: "Yard density is the strongest modeled driver.",
-        intent: "root_mechanism_analysis"
+        intent: "root_mechanism_analysis",
+        analysisId: "analysis_demo_001",
+        causalResult: {
+          targetNodeId: "qc_productivity",
+          observedDelta: -0.1,
+          dominantPaths: [],
+          feedbackLoops: []
+        },
+        evidence: [],
+        reasoningTrace: {
+          targetNodeId: "qc_productivity",
+          steps: []
+        },
+        visualization: {
+          highlightedNodes: [],
+          highlightedEdges: [],
+          focusSubgraphId: "reasoning_qc_productivity",
+          reasoningNodes: [],
+          reasoningEdges: [],
+          loops: []
+        }
       })
     });
     vi.stubGlobal("fetch", fetchMock);
