@@ -1,5 +1,5 @@
 from api.schemas.base import ApiModel
-from api.schemas.common import TimeWindow, VisualizationPayload
+from api.schemas.common import ReasoningTracePayload, TimeWindow, VisualizationPayload
 from pydantic import Field
 
 
@@ -20,6 +20,7 @@ class QueryResponse(ApiModel):
     answer: str
     causal_result: dict[str, object]
     evidence: list[dict[str, object]]
+    reasoning_trace: ReasoningTracePayload
     visualization: VisualizationPayload
 
 

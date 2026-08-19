@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from math import prod
+from typing import cast
 
 import networkx as nx
 
@@ -52,7 +53,9 @@ def _safe_paths(
     graph: nx.DiGraph, source_node_id: str, target_node_id: str, cutoff: int
 ) -> Iterable[list[str]]:
     try:
-        return nx.all_simple_paths(graph, source_node_id, target_node_id, cutoff=cutoff)
+        return cast(
+            Iterable[list[str]],
+            nx.all_simple_paths(graph, source_node_id, target_node_id, cutoff=cutoff),
+        )
     except nx.NetworkXNoPath:
         return []
-
