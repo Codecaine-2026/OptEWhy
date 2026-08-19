@@ -7,25 +7,22 @@ engine.
 
 ## Configuration
 
-Keep local development in deterministic mock mode:
-
-```bash
-export INTENT_PARSER_MODE=mock
-```
-
-To use OpenAI, create an API key in the OpenAI Platform and export the server-side variables before
+OpenAI mode is the default for the application. Configure the backend with your API key before
 starting FastAPI:
 
 ```bash
 export INTENT_PARSER_MODE=openai
 export OPENAI_API_KEY="your_api_key_here"
-export OPENAI_MODEL="gpt-5-mini"
+export OPENAI_MODEL="gpt-5.6-luna"
+export OPENAI_REASONING_EFFORT="low"
 export OPENAI_TIMEOUT_SECONDS=10
 make api
 ```
 
 The API key must never be placed in frontend environment variables or committed to Git. The OpenAI
 Python SDK reads the key on the backend. The `.env.example` files contain placeholders only.
+
+Mock mode remains available for offline tests by explicitly setting `INTENT_PARSER_MODE=mock`.
 
 `INTENT_PARSER_FALLBACK_TO_MOCK=true` enables deterministic fallback if the OpenAI request fails.
 It is disabled by default so a production outage cannot silently change interpretation behavior.

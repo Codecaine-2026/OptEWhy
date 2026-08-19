@@ -1,16 +1,10 @@
 "use client";
 
-import { Activity, Database, GitBranch, Ship, Wifi } from "lucide-react";
+import { Ship } from "lucide-react";
 import { CausalMapCanvas } from "@/features/causal-map/CausalMapCanvas";
-import { NodeInspector } from "@/features/causal-map/NodeInspector";
 import { CopilotPanel } from "@/features/copilot/CopilotPanel";
-import { EvidenceDrawer } from "@/features/copilot/EvidenceDrawer";
-import { LoopInspector } from "@/features/scenario-simulator/LoopInspector";
-import { PathContributionPanel } from "@/features/scenario-simulator/PathContributionPanel";
-import { PropagationTimeline } from "@/features/scenario-simulator/PropagationTimeline";
-import { ScenarioComposer } from "@/features/scenario-simulator/ScenarioComposer";
 import { ScenarioImpactTable } from "@/features/scenario-simulator/ScenarioImpactTable";
-import { causalEdges, causalNodes, evidence, impactRows, loops, paths } from "@/lib/mockData";
+import { causalEdges, causalNodes, impactRows } from "@/lib/mockData";
 
 export function OperationsWorkspace() {
   return (
@@ -20,40 +14,28 @@ export function OperationsWorkspace() {
           <Ship size={22} />
           <div>
             <strong>OptEWhy</strong>
-            <span>Port Causal Intelligence</span>
+            <span>Port operations copilot</span>
           </div>
-        </div>
-        <div className="statusGroup">
-          <span><Database size={15} /> Terminal Alpha</span>
-          <span><Activity size={15} /> Current Shift</span>
-          <span><GitBranch size={15} /> Scenario Mode</span>
-          <span className="ok"><Wifi size={15} /> Live Mock</span>
         </div>
       </header>
 
       <section className="mainGrid">
-        <aside className="leftPanel">
+        <section className="copilotArea">
           <CopilotPanel />
-          <EvidenceDrawer items={evidence} />
-        </aside>
-
-        <section className="mapPanel">
-          <CausalMapCanvas nodes={causalNodes} edges={causalEdges} />
-          <NodeInspector node={causalNodes[0]} />
         </section>
 
-        <aside className="rightRail">
-          <PathContributionPanel paths={paths} />
-          <LoopInspector loops={loops} />
-          <ScenarioComposer />
-        </aside>
+        <section className="mapPanel">
+          <div className="mapHeader">
+            <h2>Causal Graph</h2>
+            <span>8 modeled nodes</span>
+          </div>
+          <CausalMapCanvas nodes={causalNodes} edges={causalEdges} />
+        </section>
       </section>
 
       <section className="bottomPanel">
         <ScenarioImpactTable rows={impactRows} />
-        <PropagationTimeline />
       </section>
     </main>
   );
 }
-

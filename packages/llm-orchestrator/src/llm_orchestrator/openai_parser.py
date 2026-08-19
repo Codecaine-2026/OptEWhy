@@ -63,6 +63,7 @@ class OpenAIIntentParser:
         node_catalog: Mapping[str, str],
         model: str,
         api_key: str | None = None,
+        reasoning_effort: str = "low",
         timeout_seconds: float = 10.0,
         client: _OpenAIClient | None = None,
     ) -> None:
@@ -71,6 +72,7 @@ class OpenAIIntentParser:
 
         self._node_catalog = dict(node_catalog)
         self._model = model
+        self._reasoning_effort = reasoning_effort
         self._client = client or cast(
             _OpenAIClient,
             OpenAI(api_key=api_key, timeout=timeout_seconds, max_retries=1),
@@ -84,6 +86,7 @@ class OpenAIIntentParser:
                     {"role": "system", "content": self._system_prompt()},
                     {"role": "user", "content": message},
                 ],
+                reasoning={"effort": self._reasoning_effort},
                 text_format=OpenAIIntentOutput,
             )
         except Exception as exc:

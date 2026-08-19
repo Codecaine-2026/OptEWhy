@@ -17,9 +17,7 @@ describe("CopilotPanel", () => {
   it("shows the answer returned by the backend", async () => {
     submitCopilotQueryMock.mockResolvedValue({
       answer: "QC waiting is the strongest modeled driver.",
-      intent: "root_mechanism_analysis",
-      paths: [],
-      evidence: []
+      intent: "root_mechanism_analysis"
     });
     render(<CopilotPanel />);
 

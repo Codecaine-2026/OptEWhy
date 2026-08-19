@@ -6,16 +6,21 @@ from llm_orchestrator.models import StructuredQuery
 from llm_orchestrator.parsers import (
     IntentParserUnavailableError,
     InvalidIntentTargetError,
+    MockIntentParser,
 )
 
 
 def test_query_endpoint_returns_contract() -> None:
-    client = TestClient(app)
-
-    response = client.post(
-        "/api/query",
-        json={"message": "Why is Vessel A productivity low?", "terminal_id": "terminal_alpha"},
+    app.dependency_overrides[get_query_orchestrator] = lambda: QueryOrchestrator(
+        parser=MockIntentParser()
     )
+    try:
+        response = TestClient(app).post(
+            "/api/query",
+            json={"message": "Why is Vessel A productivity low?", "terminal_id": "terminal_alpha"},
+        )
+    finally:
+        app.dependency_overrides.clear()
 
     assert response.status_code == 200
     body = response.json()

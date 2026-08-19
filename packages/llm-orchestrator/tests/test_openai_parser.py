@@ -88,6 +88,7 @@ def test_openai_parser_builds_validated_structured_query() -> None:
     assert query.target.node_id == "yard_density"
     assert query.raw_message == message
     assert responses.last_kwargs["model"] == "test-model"
+    assert responses.last_kwargs["reasoning"] == {"effort": "low"}
     assert responses.last_kwargs["text_format"] is OpenAIIntentOutput
     prompt_input = responses.last_kwargs["input"]
     assert isinstance(prompt_input, list)

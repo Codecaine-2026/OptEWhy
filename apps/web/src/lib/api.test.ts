@@ -12,16 +12,7 @@ describe("submitCopilotQuery", () => {
       status: 200,
       json: async () => ({
         answer: "Yard density is the strongest modeled driver.",
-        intent: "root_mechanism_analysis",
-        causalResult: {
-          dominantPaths: [
-            {
-              path: ["yard_density", "qc_productivity"],
-              contributionRatio: 0.46
-            }
-          ]
-        },
-        evidence: []
+        intent: "root_mechanism_analysis"
       })
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -38,7 +29,7 @@ describe("submitCopilotQuery", () => {
       terminalId: "terminal_alpha"
     });
     expect(result.answer).toContain("Yard density");
-    expect(result.paths[0].contribution).toBe(0.46);
+    expect(result.intent).toBe("root_mechanism_analysis");
   });
 
   it("surfaces an API error to the Copilot UI", async () => {

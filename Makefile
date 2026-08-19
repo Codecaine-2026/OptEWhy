@@ -10,7 +10,7 @@ dev:
 	docker compose up --build
 
 api:
-	uvicorn api.main:app --reload --app-dir apps/api/src
+	$(PYTHON) -m uvicorn api.main:app --reload --app-dir apps/api/src
 
 web:
 	npm --workspace apps/web run dev

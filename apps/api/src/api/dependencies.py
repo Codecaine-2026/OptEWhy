@@ -26,6 +26,7 @@ def get_intent_parser() -> IntentParser:
         node_catalog=node_catalog,
         model=settings.openai_model,
         api_key=settings.openai_api_key,
+        reasoning_effort=settings.openai_reasoning_effort,
         timeout_seconds=settings.openai_timeout_seconds,
     )
     if settings.intent_parser_fallback_to_mock:

@@ -34,7 +34,7 @@ export function CopilotPanel() {
     <section className="panel copilotPanel">
       <div className="panelHeader">
         <h2>AI Copilot</h2>
-        <span>Root mechanism</span>
+        <span>Causal analysis</span>
       </div>
       <div className="answerBox" aria-live="polite">{answer}</div>
       <div className="chatInput">

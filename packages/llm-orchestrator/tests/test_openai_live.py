@@ -21,8 +21,9 @@ def test_openai_parser_live_smoke() -> None:
             "qc_productivity": "QC Productivity",
             "vessel_turnaround_time": "Vessel Turnaround Time",
         },
-        model=os.getenv("OPENAI_MODEL", "gpt-5-mini"),
+        model=os.getenv("OPENAI_MODEL", "gpt-5.6-luna"),
         api_key=os.environ["OPENAI_API_KEY"],
+        reasoning_effort=os.getenv("OPENAI_REASONING_EFFORT", "low"),
     )
 
     query = parser.parse("What is driving vessel turnaround time?")
