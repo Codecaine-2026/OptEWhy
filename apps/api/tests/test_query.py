@@ -2,7 +2,7 @@ from api.dependencies import get_query_orchestrator
 from api.main import app
 from api.services.query_orchestrator import QueryOrchestrator
 from fastapi.testclient import TestClient
-from llm_orchestrator.models import StructuredQuery
+from llm_orchestrator.models import IntentType, StructuredQuery
 from llm_orchestrator.parsers import (
     IntentParserUnavailableError,
     InvalidIntentTargetError,
@@ -92,7 +92,37 @@ class FailingParser:
         raise self._error
 
 
-def test_query_endpoint_returns_503_when_openai_parser_is_unavailable() -> None:
+class GreetingResponder:
+    def respond(self, message: str) -> str:
+        assert message == "hi"
+        return "Hi! How can I help?"
+
+
+class GreetingParser:
+    def parse(self, message: str) -> StructuredQuery:
+        return StructuredQuery(intent=IntentType.CASUAL_CONVERSATION, raw_message=message)
+
+
+def test_query_endpoint_uses_chat_responder_for_greetings() -> None:
+    app.dependency_overrides[get_query_orchestrator] = lambda: QueryOrchestrator(
+        parser=GreetingParser(),
+        chat_responder=GreetingResponder(),
+    )
+    try:
+        response = TestClient(app).post(
+            "/api/query",
+            json={"message": "hi", "terminal_id": "terminal_alpha"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["intent"] == "casual_conversation"
+    assert response.json()["answer"] == "Hi! How can I help?"
+    assert response.json()["causalResult"] == {}
+
+
+def test_query_endpoint_returns_503_when_gemini_parser_is_unavailable() -> None:
     app.dependency_overrides[get_query_orchestrator] = lambda: QueryOrchestrator(
         parser=FailingParser(IntentParserUnavailableError("offline"))
     )

@@ -10,7 +10,7 @@ dev:
 	docker compose up --build
 
 api:
-	$(PYTHON) -m uvicorn api.main:app --reload --app-dir apps/api/src
+	set -a; [ ! -f .env ] || . ./.env; set +a; PYTHONPATH=apps/api/src:packages/rag-engine/src:packages/causal-engine/src:packages/llm-orchestrator/src:packages/shared-domain/src:packages/data-connectors/src arch -arm64 $(PYTHON) -m uvicorn api.main:app --app-dir apps/api/src
 
 web:
 	npm --workspace apps/web run dev

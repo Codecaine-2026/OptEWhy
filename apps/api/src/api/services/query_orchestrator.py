@@ -5,18 +5,39 @@ from api.services.reasoning_trace_builder import ReasoningTraceBuilder
 from api.services.visualization_builder import VisualizationBuilder
 from causal_engine.analysis import find_dominant_paths
 from causal_engine.loops import detect_feedback_loops
+from llm_orchestrator.chat import ChatResponder
+from llm_orchestrator.models import IntentType
 from llm_orchestrator.parsers import IntentParser
 
 
 class QueryOrchestrator:
-    def __init__(self, parser: IntentParser) -> None:
+    def __init__(self, parser: IntentParser, chat_responder: ChatResponder | None = None) -> None:
         self._parser = parser
+        self._chat_responder = chat_responder
         self._explanation_builder = ExplanationBuilder()
         self._reasoning_trace_builder = ReasoningTraceBuilder()
         self._visualization_builder = VisualizationBuilder()
 
     def handle(self, request: QueryRequest) -> QueryResponse:
         structured_query = self._parser.parse(request.message)
+        if structured_query.intent == IntentType.CASUAL_CONVERSATION:
+            answer = (
+                self._chat_responder.respond(request.message)
+                if self._chat_responder is not None
+                else (
+                    "Hi! I’m the OptEWhy Copilot. Ask me about port operations "
+                    "or the causal graph."
+                )
+            )
+            return QueryResponse(
+                analysis_id="chat_demo_001",
+                intent=structured_query.intent.value,
+                answer=answer,
+                causal_result={},
+                evidence=[],
+                visualization=self._visualization_builder.build_for_paths([]),
+            )
+
         graph = build_demo_graph()
         snapshot = build_demo_snapshot()
         target_node_id = (

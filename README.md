@@ -25,6 +25,8 @@ This installs Python development dependencies and frontend workspace dependencie
 
 ## Run Locally
 
+For the default Gemini parser, first copy `.env.example` to `.env` and set `GEMINI_API_KEY`.
+
 Run the full local stack:
 
 ```bash
@@ -43,8 +45,8 @@ Run only the web app:
 make web
 ```
 
-To replace the offline keyword parser with OpenAI Structured Outputs, follow
-[`docs/openai-intent-parser.md`](docs/openai-intent-parser.md).
+The default Gemini structured-output parser is documented in
+[`docs/gemini-intent-parser.md`](docs/gemini-intent-parser.md).
 
 Default local URLs:
 

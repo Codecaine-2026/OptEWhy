@@ -22,6 +22,17 @@ class InvalidIntentTargetError(IntentParserError):
 class MockIntentParser:
     def parse(self, message: str) -> StructuredQuery:
         lowered = message.lower()
+        greetings = {
+            "hi",
+            "hello",
+            "hey",
+            "hey there",
+            "good morning",
+            "good afternoon",
+            "good evening",
+        }
+        if lowered.strip() in greetings:
+            return StructuredQuery(intent=IntentType.CASUAL_CONVERSATION, raw_message=message)
         if "what if" in lowered or "move" in lowered or "add" in lowered:
             return StructuredQuery(intent=IntentType.SCENARIO_SIMULATION, raw_message=message)
         if "report" in lowered or "evidence" in lowered:

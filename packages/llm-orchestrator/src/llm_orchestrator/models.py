@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class IntentType(StrEnum):
+    CASUAL_CONVERSATION = "casual_conversation"
     ANOMALY_EXPLANATION = "anomaly_explanation"
     ROOT_MECHANISM_ANALYSIS = "root_mechanism_analysis"
     SCENARIO_SIMULATION = "scenario_simulation"
@@ -31,4 +32,3 @@ class StructuredQuery(BaseModel):
     time_window: dict[str, str] = Field(default_factory=lambda: {"mode": "current_shift"})
     analysis_options: AnalysisOptions = Field(default_factory=AnalysisOptions)
     raw_message: str
-
