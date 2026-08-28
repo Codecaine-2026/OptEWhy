@@ -1,6 +1,7 @@
 from api.schemas.common import ReasoningTracePayload, VisualizationPayload
 from api.schemas.query import QueryRequest, QueryResponse
 from api.services.demo_data import build_demo_graph, build_demo_snapshot
+from api.services.evidence_seed import load_rag_seed_chunks
 from api.services.explanation_builder import ExplanationBuilder
 from api.services.reasoning_trace_builder import ReasoningTraceBuilder
 from api.services.visualization_builder import VisualizationBuilder
@@ -9,6 +10,8 @@ from causal_engine.loops import detect_feedback_loops
 from llm_orchestrator.chat import ChatResponder
 from llm_orchestrator.models import IntentType
 from llm_orchestrator.parsers import IntentParser
+from rag_engine.mock import InMemoryRetriever
+from rag_engine.models import RetrievalQuery
 
 
 class QueryOrchestrator:
@@ -69,7 +72,12 @@ class QueryOrchestrator:
                 for loop in loops
             ],
         }
-        evidence: list[dict[str, object]] = []
+        evidence = _retrieve_evidence(
+            message=request.message,
+            terminal_id=request.terminal_id,
+            target_node_id=target_node_id,
+            path_node_ids=[node_id for path in paths for node_id in path.path],
+        )
         reasoning_trace = self._reasoning_trace_builder.build(
             graph=graph,
             target_node_id=target_node_id,
@@ -91,3 +99,35 @@ class QueryOrchestrator:
                 trace=reasoning_trace,
             ),
         )
+
+
+def _retrieve_evidence(
+    *,
+    message: str,
+    terminal_id: str,
+    target_node_id: str,
+    path_node_ids: list[str],
+) -> list[dict[str, object]]:
+    retriever = InMemoryRetriever(list(load_rag_seed_chunks()))
+    entity_ids = list(dict.fromkeys([target_node_id, *path_node_ids]))
+    results = retriever.retrieve(
+        RetrievalQuery(
+            question=message,
+            terminal_id=terminal_id,
+            entity_ids=entity_ids,
+            limit=3,
+        )
+    )
+    return [
+        {
+            "documentId": result.citation.document_id,
+            "chunkId": result.citation.chunk_id,
+            "sourceTitle": result.metadata.source_title,
+            "sourceUrl": result.metadata.source_url,
+            "text": result.text,
+            "score": result.citation.score,
+            "relatedNodes": result.metadata.related_nodes,
+            "relatedEdges": result.metadata.related_edges,
+        }
+        for result in results
+    ]

@@ -3,7 +3,7 @@ from typing import Annotated
 from api.dependencies import get_scenario_orchestrator
 from api.schemas.query import ScenarioRequest, ScenarioResponse
 from api.services.scenario_orchestrator import ScenarioOrchestrator
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
 router = APIRouter(tags=["scenarios"])
 
@@ -13,4 +13,10 @@ def simulate_scenario(
     request: ScenarioRequest,
     orchestrator: Annotated[ScenarioOrchestrator, Depends(get_scenario_orchestrator)],
 ) -> ScenarioResponse:
-    return orchestrator.handle(request)
+    try:
+        return orchestrator.handle(request)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc

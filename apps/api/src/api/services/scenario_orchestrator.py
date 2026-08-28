@@ -1,4 +1,4 @@
-from api.schemas.query import ScenarioRequest, ScenarioResponse, SideEffect
+from api.schemas.query import ScenarioRequest, ScenarioResponse
 from api.services.demo_data import build_demo_graph, build_demo_snapshot
 from causal_engine.models import ScenarioIntervention
 from causal_engine.simulation import simulate_scenario
@@ -8,13 +8,18 @@ class ScenarioOrchestrator:
     def handle(self, request: ScenarioRequest) -> ScenarioResponse:
         graph = build_demo_graph()
         snapshot = build_demo_snapshot()
-        interventions = [
-            ScenarioIntervention(
-                node_id="yard_density",
-                operation="decrease_relative",
-                value=0.15,
-            )
-        ]
+        requested_intervention = request.intervention
+        intervention = ScenarioIntervention(
+            node_id=(requested_intervention.node_id if requested_intervention else "yard_density"),
+            operation=(
+                requested_intervention.operation if requested_intervention else "decrease_relative"
+            ),
+            value=requested_intervention.value if requested_intervention else 0.15,
+        )
+        if intervention.node_id not in snapshot.node_values:
+            raise ValueError(f"Unsupported intervention node: {intervention.node_id}")
+
+        interventions = [intervention]
         result = simulate_scenario(graph, snapshot, interventions, steps=4)
 
         return ScenarioResponse(
@@ -24,18 +29,11 @@ class ScenarioOrchestrator:
                 "interventions": [intervention.model_dump() for intervention in interventions],
             },
             predicted_impact={
-                "qc_productivity": result.final_state.get("qc_productivity", 0.0)
-                - snapshot.node_values.get("qc_productivity", 0.0),
-                "vessel_turnaround_time_minutes": -19.0,
+                node_id: result.final_state.get(node_id, 0.0) - baseline_value
+                for node_id, baseline_value in result.baseline.items()
             },
-            side_effects=[
-                SideEffect(
-                    node_id="gate_retrieval_time",
-                    impact=0.02,
-                    description=(
-                        "Gate retrieval time may increase if load is shifted to a denser block."
-                    ),
-                )
-            ],
+            baseline_state=result.baseline,
+            scenario_state=result.final_state,
+            side_effects=[],
             propagation_frames=result.propagation_frames,
         )

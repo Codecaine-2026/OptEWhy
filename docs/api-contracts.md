@@ -22,7 +22,7 @@ The query endpoint returns:
 - `answer`.
 - `causalResult`.
 - `evidence`.
+- `reasoningTrace`.
 - `visualization`.
 
 Every production analysis should be traceable to a data snapshot, FCM model version, dynamic weight model version, and retrieved evidence identifiers.
-

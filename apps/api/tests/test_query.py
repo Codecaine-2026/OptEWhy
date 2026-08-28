@@ -27,6 +27,8 @@ def test_query_endpoint_returns_contract() -> None:
     assert body["analysisId"] == "analysis_demo_001"
     assert body["causalResult"]["dominantPaths"][0]["contributionRatio"] > 0
     assert "approximately 0%" not in body["answer"]
+    assert body["evidence"]
+    assert body["evidence"][0]["documentId"]
 
     reasoning_trace = body["reasoningTrace"]
     assert reasoning_trace["targetNodeId"] == body["causalResult"]["targetNodeId"]
@@ -46,6 +48,7 @@ def test_query_endpoint_returns_contract() -> None:
     assert dominant_path_steps[0]["usedEdgeIds"]
     assert dominant_path_steps[0]["contributionRatio"] > 0
     assert dominant_path_steps[0]["confidence"] > 0
+    assert dominant_path_steps[0]["evidenceRefs"]
 
     visualization = body["visualization"]
     assert visualization["highlightedNodes"]

@@ -25,10 +25,29 @@ describe("CopilotPanel", () => {
         dominantPaths: [],
         feedbackLoops: []
       },
-      evidence: [],
+      evidence: [
+        {
+          documentId: "yard_report",
+          chunkId: "yard_report_001",
+          sourceTitle: "Yard operations report",
+          text: "Yard congestion can increase QC waiting.",
+          score: 0.8,
+          relatedNodes: ["yard_density"],
+          relatedEdges: []
+        }
+      ],
       reasoningTrace: {
         targetNodeId: "qc_productivity",
-        steps: []
+        steps: [
+          {
+            id: "path_1",
+            stepType: "dominant_path",
+            summary: "Ranked the strongest causal path.",
+            usedNodeIds: ["yard_density", "qc_productivity"],
+            usedEdgeIds: [],
+            evidenceRefs: []
+          }
+        ]
       },
       visualization: {
         highlightedNodes: [],
@@ -46,6 +65,8 @@ describe("CopilotPanel", () => {
     await waitFor(() => {
       expect(screen.getByText("QC waiting is the strongest modeled driver.")).toBeTruthy();
     });
+    expect(screen.getByText("Reasoning trace")).toBeTruthy();
+    expect(screen.getByText("Yard operations report")).toBeTruthy();
     expect(submitCopilotQueryMock).toHaveBeenCalledWith(
       "Why is Vessel A productivity low?"
     );
@@ -59,6 +80,39 @@ describe("CopilotPanel", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Copilot backend is unavailable")).toBeTruthy();
+    });
+  });
+
+  it("shares the full analysis response with its parent", async () => {
+    const response = {
+      answer: "QC waiting is the strongest modeled driver.",
+      intent: "root_mechanism_analysis",
+      analysisId: "analysis_demo_001",
+      causalResult: {
+        targetNodeId: "qc_productivity",
+        observedDelta: -0.1,
+        dominantPaths: [],
+        feedbackLoops: []
+      },
+      evidence: [],
+      reasoningTrace: { targetNodeId: "qc_productivity", steps: [] },
+      visualization: {
+        highlightedNodes: ["qc_productivity"],
+        highlightedEdges: ["waiting_to_productivity"],
+        focusSubgraphId: "reasoning_qc_productivity",
+        reasoningNodes: [],
+        reasoningEdges: [],
+        loops: []
+      }
+    };
+    submitCopilotQueryMock.mockResolvedValue(response);
+    const onResponse = vi.fn();
+    render(<CopilotPanel onResponse={onResponse} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Send query" }));
+
+    await waitFor(() => {
+      expect(onResponse).toHaveBeenCalledWith(response);
     });
   });
 });

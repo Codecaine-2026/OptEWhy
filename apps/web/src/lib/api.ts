@@ -1,4 +1,4 @@
-import type { QueryResponse } from "./types";
+import type { QueryResponse, ScenarioIntervention, ScenarioResponse } from "./types";
 
 type ApiErrorResponse = {
   detail?: string;
@@ -30,4 +30,19 @@ export async function submitCopilotQuery(message: string) {
   }
 
   return payload;
+}
+
+export async function simulateScenario(message: string, intervention: ScenarioIntervention) {
+  const response = await fetch(`${apiBaseUrl}/api/scenarios/simulate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, terminalId: "terminal_alpha", intervention })
+  });
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => ({}))) as ApiErrorResponse;
+    throw new Error(error.detail ?? `Scenario request failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as ScenarioResponse;
 }

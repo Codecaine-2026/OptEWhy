@@ -100,6 +100,50 @@ input {
   padding: 10px 14px;
 }
 
+.scenarioControls {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.scenarioControls label {
+  display: grid;
+  gap: 3px;
+  color: #5f6e76;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.scenarioControls select,
+.scenarioControls input,
+.scenarioControls button {
+  min-height: 32px;
+  border: 1px solid #c9d4d7;
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: #ffffff;
+}
+
+.scenarioControls button {
+  border: 0;
+  background: #176c58;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.scenarioControls button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.scenarioStatus {
+  margin: -2px 0 8px;
+  color: #5f6e76;
+  font-size: 12px;
+}
+
 .panelHeader {
   display: flex;
   align-items: center;
@@ -130,6 +174,43 @@ input {
   background: #f7f9fa;
   line-height: 1.45;
   font-size: 14px;
+}
+
+.analysisDetails {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-height: 180px;
+  overflow: auto;
+  margin-top: 8px;
+}
+
+.analysisDetailSection h3 {
+  margin: 0 0 5px;
+  font-size: 12px;
+}
+
+.analysisDetailSection ol,
+.analysisDetailSection ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+}
+
+.analysisDetailSection li {
+  display: grid;
+  gap: 2px;
+}
+
+.analysisDetailSection a {
+  color: #176c58;
+  font-weight: 700;
+}
+
+.analysisDetailSection small {
+  color: #5f6e76;
 }
 
 .chatInput {
@@ -216,6 +297,11 @@ th {
 
   .copilotPanel {
     min-height: 360px;
+  }
+
+  .analysisDetails {
+    grid-template-columns: 1fr;
+    max-height: none;
   }
 
   .mapPanel {

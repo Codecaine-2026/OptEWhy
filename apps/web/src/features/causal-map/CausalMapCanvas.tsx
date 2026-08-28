@@ -3,6 +3,8 @@ import type { CausalEdge, CausalNode } from "@/lib/types";
 type Props = {
   nodes: CausalNode[];
   edges: CausalEdge[];
+  highlightedNodeIds?: string[];
+  highlightedEdgeIds?: string[];
 };
 
 const nodeWidth = 170;
@@ -32,8 +34,16 @@ function connectionPoints(source: CausalNode, target: CausalNode) {
   };
 }
 
-export function CausalMapCanvas({ nodes, edges }: Props) {
+export function CausalMapCanvas({
+  nodes,
+  edges,
+  highlightedNodeIds = [],
+  highlightedEdgeIds = []
+}: Props) {
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const highlightedNodes = new Set(highlightedNodeIds);
+  const highlightedEdges = new Set(highlightedEdgeIds);
+  const hasHighlights = highlightedNodes.size > 0 || highlightedEdges.size > 0;
 
   return (
     <section className="causalCanvas" aria-label={`${nodes.length}-node causal system map`}>
@@ -54,36 +64,46 @@ export function CausalMapCanvas({ nodes, edges }: Props) {
           }
           const points = connectionPoints(source, target);
           const isPositive = edge.polarity === "positive";
+          const isHighlighted = highlightedEdges.has(edge.id);
           return (
             <line
               key={edge.id}
               {...points}
               stroke={isPositive ? "#1f8a70" : "#b33a3a"}
-              strokeWidth={Math.max(2, Math.abs(edge.weight) * 7)}
+              strokeWidth={Math.max(2, Math.abs(edge.weight) * 7) + (isHighlighted ? 1.5 : 0)}
               strokeLinecap="round"
-              opacity={0.76}
+              opacity={hasHighlights && !isHighlighted ? 0.16 : 0.9}
               markerEnd={`url(#${isPositive ? "positiveArrow" : "negativeArrow"})`}
             />
           );
         })}
-        {nodes.map((node) => (
-          <g key={node.id} transform={`translate(${node.x}, ${node.y})`}>
-            <rect
-              width={nodeWidth}
-              height={nodeHeight}
-              rx="8"
-              fill={node.abnormality >= 0 ? "#f8faf8" : "#fff7f7"}
-              stroke={node.abnormality >= 0 ? "#1f8a70" : "#b33a3a"}
-              strokeWidth={1.5 + Math.abs(node.abnormality) * 2}
-            />
-            <text x="12" y="25" className="svgLabel">
-              {node.label}
-            </text>
-            <text x="12" y="45" className="svgMeta">
-              {node.subsystem} | {Math.round(node.abnormality * 100)}%
-            </text>
-          </g>
-        ))}
+        {nodes.map((node) => {
+          const isHighlighted = highlightedNodes.has(node.id);
+          return (
+            <g
+              key={node.id}
+              className={isHighlighted ? "causalNode causalNodeHighlighted" : "causalNode"}
+              data-highlighted={isHighlighted}
+              transform={`translate(${node.x}, ${node.y})`}
+              opacity={hasHighlights && !isHighlighted ? 0.42 : 1}
+            >
+              <rect
+                width={nodeWidth}
+                height={nodeHeight}
+                rx="8"
+                fill={node.abnormality >= 0 ? "#f8faf8" : "#fff7f7"}
+                stroke={node.abnormality >= 0 ? "#1f8a70" : "#b33a3a"}
+                strokeWidth={1.5 + Math.abs(node.abnormality) * 2 + (isHighlighted ? 1.5 : 0)}
+              />
+              <text x="12" y="25" className="svgLabel">
+                {node.label}
+              </text>
+              <text x="12" y="45" className="svgMeta">
+                {node.subsystem} | {Math.round(node.abnormality * 100)}%
+              </text>
+            </g>
+          );
+        })}
       </svg>
     </section>
   );

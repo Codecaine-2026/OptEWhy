@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { submitCopilotQuery } from "./api";
+import { simulateScenario, submitCopilotQuery } from "./api";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -65,5 +65,41 @@ describe("submitCopilotQuery", () => {
     await expect(submitCopilotQuery("Explain the delay")).rejects.toThrow(
       "Intent parsing service is temporarily unavailable"
     );
+  });
+
+  it("posts a selected intervention to the scenario endpoint", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        scenarioId: "scenario_demo_001",
+        structuredIntervention: {},
+        predictedImpact: {},
+        baselineState: { yard_density: 0.55 },
+        scenarioState: { yard_density: 0.4 },
+        propagationFrames: []
+      })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await simulateScenario("Improve yard density by 15%", {
+      nodeId: "yard_density",
+      operation: "decrease_relative",
+      value: 0.15
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/scenarios/simulate",
+      expect.objectContaining({ method: "POST" })
+    );
+    const request = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(String(request.body))).toEqual({
+      message: "Improve yard density by 15%",
+      terminalId: "terminal_alpha",
+      intervention: {
+        nodeId: "yard_density",
+        operation: "decrease_relative",
+        value: 0.15
+      }
+    });
   });
 });

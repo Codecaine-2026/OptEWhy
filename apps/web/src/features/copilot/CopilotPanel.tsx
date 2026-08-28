@@ -3,13 +3,20 @@
 import { Send } from "lucide-react";
 import { useState } from "react";
 import { submitCopilotQuery } from "@/lib/api";
+import type { QueryResponse } from "@/lib/types";
+import { AnalysisDetails } from "./AnalysisDetails";
 
-export function CopilotPanel() {
+type Props = {
+  onResponse?: (response: QueryResponse) => void;
+};
+
+export function CopilotPanel({ onResponse }: Props) {
   const [message, setMessage] = useState("Why is Vessel A productivity low?");
   const [answer, setAnswer] = useState(
     "Ask an operational question to inspect causal paths, evidence, and scenario impact."
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [analysis, setAnalysis] = useState<QueryResponse | null>(null);
 
   async function handleSubmit() {
     const trimmedMessage = message.trim();
@@ -23,6 +30,8 @@ export function CopilotPanel() {
     try {
       const response = await submitCopilotQuery(trimmedMessage);
       setAnswer(response.answer);
+      setAnalysis(response);
+      onResponse?.(response);
     } catch (error) {
       setAnswer(error instanceof Error ? error.message : "The Copilot request failed.");
     } finally {
@@ -37,6 +46,7 @@ export function CopilotPanel() {
         <span>Causal analysis</span>
       </div>
       <div className="answerBox" aria-live="polite">{answer}</div>
+      {analysis ? <AnalysisDetails evidence={analysis.evidence} reasoningTrace={analysis.reasoningTrace} /> : null}
       <div className="chatInput">
         <input
           value={message}

@@ -114,7 +114,33 @@ export type QueryResponse = {
   intent: string;
   answer: string;
   causalResult: CausalResult;
-  evidence: Record<string, unknown>[];
+  evidence: EvidenceItem[];
   reasoningTrace: ReasoningTrace;
   visualization: VisualizationPayload;
+};
+
+export type EvidenceItem = {
+  documentId: string;
+  chunkId: string;
+  sourceTitle?: string | null;
+  sourceUrl?: string | null;
+  text: string;
+  score: number;
+  relatedNodes: string[];
+  relatedEdges: string[];
+};
+
+export type ScenarioIntervention = {
+  nodeId: string;
+  operation: "increase_relative" | "decrease_relative";
+  value: number;
+};
+
+export type ScenarioResponse = {
+  scenarioId: string;
+  structuredIntervention: Record<string, unknown>;
+  predictedImpact: Record<string, number>;
+  baselineState: Record<string, number>;
+  scenarioState: Record<string, number>;
+  propagationFrames: Record<string, number>[];
 };

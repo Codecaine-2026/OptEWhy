@@ -37,6 +37,13 @@ class ScenarioRequest(ApiModel):
     terminal_id: str
     message: str
     time_window: TimeWindow = Field(default_factory=TimeWindow)
+    intervention: "ScenarioInterventionRequest | None" = None
+
+
+class ScenarioInterventionRequest(ApiModel):
+    node_id: str
+    operation: str = "decrease_relative"
+    value: float = Field(gt=0, le=1)
 
 
 class SideEffect(ApiModel):
@@ -49,5 +56,7 @@ class ScenarioResponse(ApiModel):
     scenario_id: str
     structured_intervention: dict[str, object]
     predicted_impact: dict[str, float]
+    baseline_state: dict[str, float]
+    scenario_state: dict[str, float]
     side_effects: list[SideEffect]
     propagation_frames: list[dict[str, float]]
