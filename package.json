@@ -6,10 +6,9 @@
     "apps/web"
   ],
   "scripts": {
-    "dev": "npm --workspace apps/web run dev",
+    "dev": "node scripts/dev.mjs",
     "build": "npm --workspace apps/web run build",
     "lint": "npm --workspace apps/web run lint",
     "test": "npm --workspace apps/web run test"
   }
 }
-

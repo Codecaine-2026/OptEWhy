@@ -120,6 +120,15 @@ def test_query_endpoint_uses_chat_responder_for_greetings() -> None:
     assert response.json()["intent"] == "casual_conversation"
     assert response.json()["answer"] == "Hi! How can I help?"
     assert response.json()["causalResult"] == {}
+    assert response.json()["reasoningTrace"] == {"targetNodeId": "", "steps": []}
+    assert response.json()["visualization"] == {
+        "highlightedNodes": [],
+        "highlightedEdges": [],
+        "focusSubgraphId": None,
+        "reasoningNodes": [],
+        "reasoningEdges": [],
+        "loops": [],
+    }
 
 
 def test_query_endpoint_returns_503_when_gemini_parser_is_unavailable() -> None:

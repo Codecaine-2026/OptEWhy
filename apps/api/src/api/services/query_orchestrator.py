@@ -1,3 +1,4 @@
+from api.schemas.common import ReasoningTracePayload, VisualizationPayload
 from api.schemas.query import QueryRequest, QueryResponse
 from api.services.demo_data import build_demo_graph, build_demo_snapshot
 from api.services.explanation_builder import ExplanationBuilder
@@ -35,7 +36,8 @@ class QueryOrchestrator:
                 answer=answer,
                 causal_result={},
                 evidence=[],
-                visualization=self._visualization_builder.build_for_paths([]),
+                reasoning_trace=ReasoningTracePayload(target_node_id=""),
+                visualization=VisualizationPayload(),
             )
 
         graph = build_demo_graph()
