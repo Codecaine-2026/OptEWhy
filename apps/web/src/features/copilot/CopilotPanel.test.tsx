@@ -66,7 +66,7 @@ describe("CopilotPanel", () => {
       expect(screen.getByText("QC waiting is the strongest modeled driver.")).toBeTruthy();
     });
     expect(screen.getByText("Reasoning trace")).toBeTruthy();
-    expect(screen.getByText("Yard operations report")).toBeTruthy();
+    expect(screen.getAllByText("Yard operations report")).toHaveLength(2);
     expect(submitCopilotQueryMock).toHaveBeenCalledWith(
       "Why is Vessel A productivity low?"
     );

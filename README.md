@@ -48,6 +48,10 @@ make web
 The default Gemini structured-output parser is documented in
 [`docs/gemini-intent-parser.md`](docs/gemini-intent-parser.md).
 
+With `GRAPH_REPOSITORY_MODE=postgres` and `DATABASE_URL` configured, the graph, query, and
+scenario endpoints read graph and snapshot data from PostgreSQL. Seed the reference data with the command documented in
+[`scripts/seed-demo-data/README.md`](scripts/seed-demo-data/README.md).
+
 Default local URLs:
 
 - API: `http://localhost:8000`

@@ -15,6 +15,10 @@ class IntentParserUnavailableError(IntentParserError):
     """Raised when an external parser cannot return a usable result."""
 
 
+class IntentParserRateLimitError(IntentParserUnavailableError):
+    """Raised when the external parser rejects a request because its quota is exhausted."""
+
+
 class InvalidIntentTargetError(IntentParserError):
     """Raised when a parser selects a node outside the active causal graph."""
 

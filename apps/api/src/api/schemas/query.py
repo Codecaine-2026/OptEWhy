@@ -22,6 +22,7 @@ class QueryResponse(ApiModel):
     evidence: list[dict[str, object]]
     reasoning_trace: ReasoningTracePayload
     visualization: VisualizationPayload
+    scenario: "ScenarioResponse | None" = None
 
 
 class AnalysisRecord(ApiModel):

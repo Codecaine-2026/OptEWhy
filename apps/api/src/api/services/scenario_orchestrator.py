@@ -1,13 +1,16 @@
 from api.schemas.query import ScenarioRequest, ScenarioResponse
-from api.services.demo_data import build_demo_graph, build_demo_snapshot
+from api.services.graph_repository import DemoGraphRepository, GraphRepository
 from causal_engine.models import ScenarioIntervention
 from causal_engine.simulation import simulate_scenario
 
 
 class ScenarioOrchestrator:
+    def __init__(self, graph_repository: GraphRepository | None = None) -> None:
+        self._graph_repository = graph_repository or DemoGraphRepository()
+
     def handle(self, request: ScenarioRequest) -> ScenarioResponse:
-        graph = build_demo_graph()
-        snapshot = build_demo_snapshot()
+        graph = self._graph_repository.get_graph(request.terminal_id)
+        snapshot = self._graph_repository.get_current_snapshot(request.terminal_id)
         requested_intervention = request.intervention
         intervention = ScenarioIntervention(
             node_id=(requested_intervention.node_id if requested_intervention else "yard_density"),

@@ -1,16 +1,22 @@
 "use client";
 
-import { Send } from "lucide-react";
+import { FileText, Send } from "lucide-react";
 import { useState } from "react";
 import { submitCopilotQuery } from "@/lib/api";
-import type { QueryResponse } from "@/lib/types";
+import type { EvidenceItem, QueryResponse } from "@/lib/types";
 import { AnalysisDetails } from "./AnalysisDetails";
 
 type Props = {
   onResponse?: (response: QueryResponse) => void;
+  onSelectEvidence?: (evidence: EvidenceItem) => void;
 };
 
-export function CopilotPanel({ onResponse }: Props) {
+const quickPrompts = [
+  { label: "Diagnose Vessel A", query: "Why is Vessel A productivity low?" },
+  { label: "Simulate yard improvement", query: "What if yard density improves by 15%?" }
+];
+
+export function CopilotPanel({ onResponse, onSelectEvidence }: Props) {
   const [message, setMessage] = useState("Why is Vessel A productivity low?");
   const [answer, setAnswer] = useState(
     "Ask an operational question to inspect causal paths, evidence, and scenario impact."
@@ -18,8 +24,8 @@ export function CopilotPanel({ onResponse }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [analysis, setAnalysis] = useState<QueryResponse | null>(null);
 
-  async function handleSubmit() {
-    const trimmedMessage = message.trim();
+  async function handleSubmit(query = message) {
+    const trimmedMessage = query.trim();
     if (!trimmedMessage) {
       setAnswer("Enter an operational question first.");
       return;
@@ -45,8 +51,35 @@ export function CopilotPanel({ onResponse }: Props) {
         <h2>AI Copilot</h2>
         <span>Causal analysis</span>
       </div>
-      <div className="answerBox" aria-live="polite">{answer}</div>
+      <div className="answerBox" aria-live="polite">
+        <p>{answer}</p>
+        {analysis?.evidence.length ? (
+          <div className="citationPills" aria-label="Grounded evidence">
+            {analysis.evidence.map((item) => (
+              <button key={item.chunkId} type="button" onClick={() => onSelectEvidence?.(item)}>
+                <FileText size={13} />
+                {item.sourceTitle ?? item.documentId}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
       {analysis ? <AnalysisDetails evidence={analysis.evidence} reasoningTrace={analysis.reasoningTrace} /> : null}
+      <div className="quickPromptArea" aria-label="Quick prompts">
+        {quickPrompts.map((prompt) => (
+          <button
+            key={prompt.label}
+            type="button"
+            disabled={isLoading}
+            onClick={() => {
+              setMessage(prompt.query);
+              void handleSubmit(prompt.query);
+            }}
+          >
+            {prompt.label}
+          </button>
+        ))}
+      </div>
       <div className="chatInput">
         <input
           value={message}
@@ -58,7 +91,7 @@ export function CopilotPanel({ onResponse }: Props) {
         />
         <button
           aria-label={isLoading ? "Analyzing query" : "Send query"}
-          onClick={handleSubmit}
+          onClick={() => void handleSubmit()}
           disabled={isLoading}
         >
           <Send size={17} />

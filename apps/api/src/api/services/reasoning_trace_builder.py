@@ -1,5 +1,5 @@
 from api.schemas.common import EvidenceRefPayload, ReasoningStepPayload, ReasoningTracePayload
-from causal_engine.models import CausalPath, FcmEdge, FcmGraph, FeedbackLoop
+from causal_engine.models import CausalPath, FcmEdge, FcmGraph, FcmNode, FeedbackLoop
 
 
 class ReasoningTraceBuilder:
@@ -15,6 +15,7 @@ class ReasoningTraceBuilder:
         edge_by_pair = {
             (edge.source_node_id, edge.target_node_id): edge for edge in graph.edges
         }
+        node_by_id = {node.id: node for node in graph.nodes}
         evidence_refs = [_build_evidence_ref(item) for item in evidence]
         steps: list[ReasoningStepPayload] = []
 
@@ -24,10 +25,7 @@ class ReasoningTraceBuilder:
                 ReasoningStepPayload(
                     id=f"path_{path_index}",
                     step_type="dominant_path",
-                    summary=(
-                        "Ranked a backend-computed dominant causal path by normalized "
-                        "contribution to the target KPI movement."
-                    ),
+                    summary=_path_reasoning_summary(path, edge_by_pair, node_by_id),
                     used_node_ids=path.path,
                     used_edge_ids=edge_ids,
                     evidence_refs=_matching_evidence_refs(evidence_refs, path.path, edge_ids),
@@ -49,10 +47,7 @@ class ReasoningTraceBuilder:
                 ReasoningStepPayload(
                     id=f"loop_{loop_index}",
                     step_type="feedback_loop",
-                    summary=(
-                        "Selected a feedback loop that overlaps with the dominant "
-                        "reasoning subgraph."
-                    ),
+                    summary=_loop_reasoning_summary(loop, node_by_id),
                     used_node_ids=loop.nodes,
                     used_edge_ids=edge_ids,
                     evidence_refs=_matching_evidence_refs(evidence_refs, loop.nodes, edge_ids),
@@ -75,6 +70,39 @@ def _edge_ids_for_path(
         if edge is not None:
             edge_ids.append(edge.id)
     return edge_ids
+
+
+def _path_reasoning_summary(
+    path: CausalPath,
+    edge_by_pair: dict[tuple[str, str], FcmEdge],
+    node_by_id: dict[str, FcmNode],
+) -> str:
+    transitions: list[str] = []
+    for index, (source_id, target_id) in enumerate(
+        zip(path.path, path.path[1:], strict=False), start=1
+    ):
+        edge = edge_by_pair.get((source_id, target_id))
+        source = node_by_id.get(source_id)
+        target = node_by_id.get(target_id)
+        if edge is None or source is None or target is None:
+            continue
+        direction = "increases" if edge.polarity.value == "positive" else "reduces"
+        transitions.append(
+            f"{index}. {source.label} {direction} {target.label} "
+            f"(weight {edge.base_weight:.2f}, confidence {edge.confidence:.0%})."
+        )
+    contribution = f"This path accounts for {path.contribution_ratio:.0%} of the estimated impact."
+    return " ".join([*transitions, contribution])
+
+
+def _loop_reasoning_summary(loop: FeedbackLoop, node_by_id: dict[str, FcmNode]) -> str:
+    labels = [node_by_id[node_id].label for node_id in loop.nodes if node_id in node_by_id]
+    loop_name = " → ".join(labels)
+    return (
+        f"{loop.loop_type.title()} feedback links {loop_name}. "
+        f"Its strength is {loop.strength:.2f} with {loop.confidence:.0%} confidence, "
+        "so it can amplify or dampen the path over time."
+    )
 
 
 def _edge_ids_for_loop(

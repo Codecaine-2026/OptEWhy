@@ -5,6 +5,7 @@ from api.schemas.query import QueryRequest, QueryResponse
 from api.services.query_orchestrator import QueryOrchestrator
 from fastapi import APIRouter, Depends, HTTPException, status
 from llm_orchestrator.parsers import (
+    IntentParserRateLimitError,
     IntentParserUnavailableError,
     InvalidIntentTargetError,
 )
@@ -23,6 +24,12 @@ def query(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(exc),
+        ) from exc
+    except IntentParserRateLimitError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Gemini API quota has been exhausted. Retry after the quota resets or check billing.",
+            headers={"Retry-After": "20"},
         ) from exc
     except IntentParserUnavailableError as exc:
         raise HTTPException(

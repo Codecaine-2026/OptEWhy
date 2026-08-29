@@ -3,11 +3,16 @@ from collections.abc import Mapping
 from typing import Protocol, cast
 
 from google import genai
+from google.genai.errors import ClientError
 from google.genai import types
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from llm_orchestrator.models import AnalysisOptions, IntentType, StructuredQuery, Target
-from llm_orchestrator.parsers import IntentParserUnavailableError, InvalidIntentTargetError
+from llm_orchestrator.parsers import (
+    IntentParserRateLimitError,
+    IntentParserUnavailableError,
+    InvalidIntentTargetError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +99,13 @@ class GeminiIntentParser:
                     response_json_schema=IntentOutput.model_json_schema(),
                 ),
             )
+        except ClientError as exc:
+            if getattr(exc, "code", None) == 429:
+                raise IntentParserRateLimitError(
+                    "Gemini API quota has been exhausted"
+                ) from exc
+            logger.exception("Gemini intent parsing failed")
+            raise IntentParserUnavailableError("Gemini intent parsing failed") from exc
         except Exception as exc:
             logger.exception("Gemini intent parsing failed")
             raise IntentParserUnavailableError("Gemini intent parsing failed") from exc
@@ -153,6 +165,22 @@ Supported intents:
 - counterfactual: estimate what would have happened if a past condition were different.
 - recommendation: suggest an intervention or operational action.
 - evidence_lookup: retrieve reports, documents, or supporting evidence.
+
+Intent decision rule:
+- Use scenario_simulation whenever the user changes an operational variable and asks, explicitly
+  or implicitly, for the resulting state or impact. This includes hypothetical wording, a proposed
+  adjustment, or a condition stated as an alternative to the current state.
+- Use counterfactual only when the user asks about an already completed past event under a
+  different historical condition. Do not use counterfactual for a proposed operational change.
+- Do not classify a request as root_mechanism_analysis merely because it names a causal variable.
+  Root mechanism analysis asks why or through which path an observed condition occurred.
+
+Classification examples:
+- "What if yard density is 20% lower?" -> scenario_simulation, target yard_density.
+- "If we reduce yard density by 20%, what changes?" -> scenario_simulation, target yard_density.
+- "Why did yard density increase?" -> anomaly_explanation, target yard_density.
+- "Which path makes yard density affect vessel turnaround?" -> root_mechanism_analysis,
+  target yard_density.
 
 Valid causal targets:
 {node_lines}

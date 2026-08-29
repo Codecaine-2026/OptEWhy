@@ -52,8 +52,14 @@ export function CausalMapCanvas({
           <marker id="positiveArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
             <path d="M0,0 L8,4 L0,8 Z" fill="#1f8a70" />
           </marker>
+          <marker id="positiveArrowMuted" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" fill="#1f8a70" opacity="0.16" />
+          </marker>
           <marker id="negativeArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
             <path d="M0,0 L8,4 L0,8 Z" fill="#b33a3a" />
+          </marker>
+          <marker id="negativeArrowMuted" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" fill="#b33a3a" opacity="0.16" />
           </marker>
         </defs>
         {edges.map((edge) => {
@@ -64,7 +70,8 @@ export function CausalMapCanvas({
           }
           const points = connectionPoints(source, target);
           const isPositive = edge.polarity === "positive";
-          const isHighlighted = highlightedEdges.has(edge.id);
+          const backendEdgeId = `edge_${edge.source}_to_${edge.target}`;
+          const isHighlighted = highlightedEdges.has(edge.id) || highlightedEdges.has(backendEdgeId);
           return (
             <line
               key={edge.id}
@@ -73,7 +80,8 @@ export function CausalMapCanvas({
               strokeWidth={Math.max(2, Math.abs(edge.weight) * 7) + (isHighlighted ? 1.5 : 0)}
               strokeLinecap="round"
               opacity={hasHighlights && !isHighlighted ? 0.16 : 0.9}
-              markerEnd={`url(#${isPositive ? "positiveArrow" : "negativeArrow"})`}
+              data-highlighted={isHighlighted}
+              markerEnd={`url(#${isPositive ? "positiveArrow" : "negativeArrow"}${hasHighlights && !isHighlighted ? "Muted" : ""})`}
             />
           );
         })}

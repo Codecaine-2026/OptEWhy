@@ -6,5 +6,4 @@ class ExplanationBuilder:
         self._builder = BackendGroundedExplanationBuilder()
 
     def build(self, causal_result: dict[str, object], evidence: list[dict[str, object]]) -> str:
-        return self._builder.build(causal_result, evidence)
-
+        return str(self._builder.build(causal_result, evidence))

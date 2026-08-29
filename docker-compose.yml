@@ -10,6 +10,9 @@ services:
     depends_on:
       - postgres
       - redis
+    environment:
+      DATABASE_URL: postgresql://optewhy:optewhy@postgres:5432/optewhy
+      GRAPH_REPOSITORY_MODE: postgres
     volumes:
       - .:/app
 

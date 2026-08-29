@@ -1,23 +1,30 @@
+from typing import Annotated
+
+from api.dependencies import get_graph_repository
 from api.schemas.graph import GraphEdgeResponse, GraphNodeResponse, GraphResponse
-from api.services.demo_data import build_demo_graph, build_demo_snapshot
-from fastapi import APIRouter
+from api.services.graph_repository import GraphRepository
+from fastapi import APIRouter, Depends
 
 router = APIRouter(tags=["graph"])
 
 
 @router.get("/graph/current", response_model=GraphResponse)
-def current_graph() -> GraphResponse:
-    return _build_graph_response()
+def current_graph(
+    repository: Annotated[GraphRepository, Depends(get_graph_repository)],
+) -> GraphResponse:
+    return _build_graph_response(repository)
 
 
 @router.get("/graph/subgraph", response_model=GraphResponse)
-def subgraph() -> GraphResponse:
-    return _build_graph_response()
+def subgraph(
+    repository: Annotated[GraphRepository, Depends(get_graph_repository)],
+) -> GraphResponse:
+    return _build_graph_response(repository)
 
 
-def _build_graph_response() -> GraphResponse:
-    graph = build_demo_graph()
-    snapshot = build_demo_snapshot()
+def _build_graph_response(repository: GraphRepository) -> GraphResponse:
+    graph = repository.get_graph("terminal_alpha")
+    snapshot = repository.get_current_snapshot("terminal_alpha")
     return GraphResponse(
         graph_id=graph.id,
         terminal_id=graph.terminal_id,
@@ -41,4 +48,3 @@ def _build_graph_response() -> GraphResponse:
             for edge in graph.edges
         ],
     )
-

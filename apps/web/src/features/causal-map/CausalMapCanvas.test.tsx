@@ -18,12 +18,15 @@ describe("CausalMapCanvas", () => {
         nodes={nodes}
         edges={edges}
         highlightedNodeIds={["target"]}
-        highlightedEdgeIds={["source_to_target"]}
+        highlightedEdgeIds={["edge_source_to_target"]}
       />
     );
 
     expect(screen.getByLabelText("2-node causal system map")).toBeTruthy();
     expect(container.querySelector('[data-highlighted="true"]')).toBeTruthy();
     expect(container.querySelectorAll('[data-highlighted="false"]')).toHaveLength(1);
+    expect(container.querySelector('line[data-highlighted="true"]')?.getAttribute("marker-end")).toBe(
+      "url(#positiveArrow)"
+    );
   });
 });

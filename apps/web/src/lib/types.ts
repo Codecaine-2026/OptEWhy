@@ -117,11 +117,13 @@ export type QueryResponse = {
   evidence: EvidenceItem[];
   reasoningTrace: ReasoningTrace;
   visualization: VisualizationPayload;
+  scenario?: ScenarioResponse | null;
 };
 
 export type EvidenceItem = {
   documentId: string;
   chunkId: string;
+  subsystem?: string | null;
   sourceTitle?: string | null;
   sourceUrl?: string | null;
   text: string;

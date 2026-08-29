@@ -92,6 +92,8 @@ def test_gemini_parser_builds_validated_structured_query() -> None:
     assert models.last_kwargs["contents"] == message
     config = models.last_kwargs["config"]
     assert "yard_density" in str(config)
+    assert "What if yard density is 20% lower?" in str(config)
+    assert "Intent decision rule" in str(config)
     assert config.response_schema is None
     assert config.response_json_schema == IntentOutput.model_json_schema()
 

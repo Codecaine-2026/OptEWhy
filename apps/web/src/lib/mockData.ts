@@ -1,4 +1,4 @@
-import type { CausalEdge, CausalNode, ImpactRow } from "./types";
+import type { CausalEdge, CausalNode } from "./types";
 
 export const causalNodes: CausalNode[] = [
   { id: "weather_severity", label: "Weather Severity", subsystem: "External", abnormality: 0.2, x: 24, y: 30 },
@@ -38,7 +38,6 @@ export const causalNodes: CausalNode[] = [
     y: 558
   }
 ];
-
 export const causalEdges: CausalEdge[] = [
   { id: "weather_to_truck", source: "weather_severity", target: "truck_travel_time", weight: 0.24, polarity: "positive" },
   { id: "weather_to_productivity", source: "weather_severity", target: "qc_productivity", weight: -0.18, polarity: "negative" },
@@ -54,10 +53,3 @@ export const causalEdges: CausalEdge[] = [
   { id: "productivity_to_turnaround", source: "qc_productivity", target: "vessel_turnaround_time", weight: -0.52, polarity: "negative" }
 ];
 
-export const impactRows: ImpactRow[] = [
-  { kpi: "Yard Density", baseline: "85%", scenario: "72%", delta: "-13%" },
-  { kpi: "Truck Travel Time", baseline: "31 min", scenario: "29 min", delta: "-6%" },
-  { kpi: "QC Waiting", baseline: "18 min", scenario: "17 min", delta: "-4%" },
-  { kpi: "QC Productivity", baseline: "27.4 mph", scenario: "28.4 mph", delta: "+3.7%" },
-  { kpi: "Vessel Turnaround", baseline: "18h 20m", scenario: "18h 01m", delta: "-19 min" }
-];

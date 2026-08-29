@@ -32,6 +32,7 @@ class Settings:
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-3.6-flash"
     gemini_timeout_seconds: float = 10.0
+    database_url: str | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -50,6 +51,7 @@ class Settings:
             raise ValueError("INTENT_PARSER_FALLBACK_TO_MOCK must be 'true' or 'false'")
 
         api_key = os.getenv("GEMINI_API_KEY") or None
+        database_url = os.getenv("DATABASE_URL") or None
         model = os.getenv("GEMINI_MODEL", "gemini-3.6-flash").strip()
         if not model:
             raise ValueError("GEMINI_MODEL cannot be empty")
@@ -63,4 +65,5 @@ class Settings:
             gemini_api_key=api_key,
             gemini_model=model,
             gemini_timeout_seconds=timeout_seconds,
+            database_url=database_url,
         )

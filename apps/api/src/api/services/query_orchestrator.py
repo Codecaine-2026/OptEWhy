@@ -1,9 +1,16 @@
 from api.schemas.common import ReasoningTracePayload, VisualizationPayload
-from api.schemas.query import QueryRequest, QueryResponse
-from api.services.demo_data import build_demo_graph, build_demo_snapshot
+from api.schemas.query import (
+    QueryRequest,
+    QueryResponse,
+    ScenarioInterventionRequest,
+    ScenarioRequest,
+    ScenarioResponse,
+)
 from api.services.evidence_seed import load_rag_seed_chunks
 from api.services.explanation_builder import ExplanationBuilder
+from api.services.graph_repository import DemoGraphRepository, GraphRepository
 from api.services.reasoning_trace_builder import ReasoningTraceBuilder
+from api.services.scenario_orchestrator import ScenarioOrchestrator
 from api.services.visualization_builder import VisualizationBuilder
 from causal_engine.analysis import find_dominant_paths
 from causal_engine.loops import detect_feedback_loops
@@ -15,12 +22,19 @@ from rag_engine.models import RetrievalQuery
 
 
 class QueryOrchestrator:
-    def __init__(self, parser: IntentParser, chat_responder: ChatResponder | None = None) -> None:
+    def __init__(
+        self,
+        parser: IntentParser,
+        graph_repository: GraphRepository | None = None,
+        chat_responder: ChatResponder | None = None,
+    ) -> None:
         self._parser = parser
+        self._graph_repository = graph_repository or DemoGraphRepository()
         self._chat_responder = chat_responder
         self._explanation_builder = ExplanationBuilder()
         self._reasoning_trace_builder = ReasoningTraceBuilder()
         self._visualization_builder = VisualizationBuilder()
+        self._scenario_orchestrator = ScenarioOrchestrator(self._graph_repository)
 
     def handle(self, request: QueryRequest) -> QueryResponse:
         structured_query = self._parser.parse(request.message)
@@ -43,8 +57,8 @@ class QueryOrchestrator:
                 visualization=VisualizationPayload(),
             )
 
-        graph = build_demo_graph()
-        snapshot = build_demo_snapshot()
+        graph = self._graph_repository.get_graph(request.terminal_id)
+        snapshot = self._graph_repository.get_current_snapshot(request.terminal_id)
         target_node_id = (
             structured_query.target.node_id if structured_query.target else "qc_productivity"
         )
@@ -85,11 +99,20 @@ class QueryOrchestrator:
             loops=loops,
             evidence=evidence,
         )
+        scenario = (
+            self._run_scenario(request, structured_query.raw_message)
+            if structured_query.intent == IntentType.SCENARIO_SIMULATION
+            else None
+        )
 
         return QueryResponse(
             analysis_id="analysis_demo_001",
             intent=structured_query.intent.value,
-            answer=self._explanation_builder.build(causal_result, evidence),
+            answer=(
+                _scenario_answer(scenario)
+                if scenario is not None
+                else self._explanation_builder.build(causal_result, evidence)
+            ),
             causal_result=causal_result,
             evidence=evidence,
             reasoning_trace=reasoning_trace,
@@ -98,6 +121,17 @@ class QueryOrchestrator:
                 snapshot=snapshot,
                 trace=reasoning_trace,
             ),
+            scenario=scenario,
+        )
+
+    def _run_scenario(self, request: QueryRequest, message: str) -> ScenarioResponse:
+        intervention = _scenario_intervention(message)
+        return self._scenario_orchestrator.handle(
+            ScenarioRequest(
+                terminal_id=request.terminal_id,
+                message=message,
+                intervention=intervention,
+            )
         )
 
 
@@ -131,3 +165,55 @@ def _retrieve_evidence(
         }
         for result in results
     ]
+
+
+def _scenario_intervention(message: str) -> ScenarioInterventionRequest:
+    lowered = message.lower()
+    node_keywords = {
+        "yard density": "yard_density",
+        "야드 밀도": "yard_density",
+        "truck travel": "truck_travel_time",
+        "트럭 이동": "truck_travel_time",
+        "qc waiting": "qc_waiting",
+        "qc 대기": "qc_waiting",
+        "berth occupancy": "berth_occupancy",
+        "선석 점유": "berth_occupancy",
+    }
+    node_id = next(
+        (candidate for phrase, candidate in node_keywords.items() if phrase in lowered),
+        "yard_density",
+    )
+    percentage = _percentage_from_message(lowered)
+    operation = (
+        "decrease_relative"
+        if any(
+            word in lowered
+            for word in ("decrease", "reduce", "lower", "improve", "낮", "줄", "개선")
+        )
+        else "increase_relative"
+    )
+    return ScenarioInterventionRequest(node_id=node_id, operation=operation, value=percentage)
+
+
+def _percentage_from_message(message: str) -> float:
+    for token in message.replace("%", " %").split():
+        if token.isdigit():
+            value = int(token)
+            if 0 < value <= 100:
+                return value / 100
+    return 0.15
+
+
+def _scenario_answer(scenario: ScenarioResponse) -> str:
+    intervention = scenario.structured_intervention["interventions"]
+    first_intervention = intervention[0] if isinstance(intervention, list) else {}
+    node_id = (
+        first_intervention.get("node_id", "selected variable")
+        if isinstance(first_intervention, dict)
+        else "selected variable"
+    )
+    value = first_intervention.get("value", 0) if isinstance(first_intervention, dict) else 0
+    return (
+        f"Simulated a {float(value) * 100:.0f}% adjustment to {node_id}. "
+        "Review the impact card and highlighted causal path."
+    )

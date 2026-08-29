@@ -163,3 +163,29 @@ def test_query_endpoint_returns_422_for_unsupported_target() -> None:
 
     assert response.status_code == 422
     assert response.json()["detail"] == "unsupported node"
+
+
+def test_query_endpoint_runs_scenario_requests_inside_the_copilot_flow() -> None:
+    app.dependency_overrides[get_query_orchestrator] = lambda: QueryOrchestrator(
+        parser=MockIntentParser()
+    )
+    try:
+        response = TestClient(app).post(
+            "/api/query",
+            json={
+                "message": "What if we reduce yard density by 20%?",
+                "terminal_id": "terminal_alpha",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["intent"] == "scenario_simulation"
+    assert body["scenario"]["structuredIntervention"]["interventions"][0] == {
+        "node_id": "yard_density",
+        "operation": "decrease_relative",
+        "value": 0.2,
+    }
+
