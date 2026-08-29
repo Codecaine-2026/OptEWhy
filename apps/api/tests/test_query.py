@@ -40,8 +40,8 @@ def test_query_endpoint_returns_contract() -> None:
     feedback_loop_steps = [
         step for step in reasoning_trace["steps"] if step["stepType"] == "feedback_loop"
     ]
-    assert dominant_path_steps
-    assert feedback_loop_steps
+    assert len(dominant_path_steps) == 1
+    assert 1 <= len(feedback_loop_steps) <= 3
     assert dominant_path_steps[0]["usedNodeIds"] == body["causalResult"]["dominantPaths"][0][
         "path"
     ]
@@ -188,4 +188,3 @@ def test_query_endpoint_runs_scenario_requests_inside_the_copilot_flow() -> None
         "operation": "decrease_relative",
         "value": 0.2,
     }
-

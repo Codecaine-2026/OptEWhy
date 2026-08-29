@@ -98,7 +98,7 @@ describe("CopilotPanel", () => {
       reasoningTrace: { targetNodeId: "qc_productivity", steps: [] },
       visualization: {
         highlightedNodes: ["qc_productivity"],
-        highlightedEdges: ["waiting_to_productivity"],
+        highlightedEdges: ["edge_qc_waiting_to_qc_productivity"],
         focusSubgraphId: "reasoning_qc_productivity",
         reasoningNodes: [],
         reasoningEdges: [],

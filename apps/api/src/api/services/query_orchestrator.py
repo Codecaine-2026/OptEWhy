@@ -14,6 +14,7 @@ from api.services.scenario_orchestrator import ScenarioOrchestrator
 from api.services.visualization_builder import VisualizationBuilder
 from causal_engine.analysis import find_dominant_paths
 from causal_engine.loops import detect_feedback_loops
+from causal_engine.models import CausalPath, FeedbackLoop
 from llm_orchestrator.chat import ChatResponder
 from llm_orchestrator.models import IntentType
 from llm_orchestrator.parsers import IntentParser
@@ -95,8 +96,8 @@ class QueryOrchestrator:
         reasoning_trace = self._reasoning_trace_builder.build(
             graph=graph,
             target_node_id=target_node_id,
-            paths=paths,
-            loops=loops,
+            paths=_top_reasoning_paths(paths),
+            loops=_top_reasoning_loops(loops),
             evidence=evidence,
         )
         scenario = (
@@ -111,7 +112,30 @@ class QueryOrchestrator:
             answer=(
                 _scenario_answer(scenario)
                 if scenario is not None
-                else self._explanation_builder.build(causal_result, evidence)
+                else self._explanation_builder.build(
+                    {
+                        **causal_result,
+                        "dominantPaths": [
+                            {
+                                "path": path.path,
+                                "contributionRatio": path.contribution_ratio,
+                                "signedImpact": path.signed_impact,
+                                "confidence": path.confidence,
+                            }
+                            for path in _top_reasoning_paths(paths)
+                        ],
+                        "feedbackLoops": [
+                            {
+                                "nodes": loop.nodes,
+                                "loopType": loop.loop_type,
+                                "strength": loop.strength,
+                                "confidence": loop.confidence,
+                            }
+                            for loop in _top_reasoning_loops(loops)
+                        ],
+                    },
+                    evidence,
+                )
             ),
             causal_result=causal_result,
             evidence=evidence,
@@ -165,6 +189,14 @@ def _retrieve_evidence(
         }
         for result in results
     ]
+
+
+def _top_reasoning_paths(paths: list[CausalPath]) -> list[CausalPath]:
+    return sorted(paths, key=lambda path: path.contribution_ratio, reverse=True)[:1]
+
+
+def _top_reasoning_loops(loops: list[FeedbackLoop]) -> list[FeedbackLoop]:
+    return sorted(loops, key=lambda loop: loop.strength, reverse=True)[:3]
 
 
 def _scenario_intervention(message: str) -> ScenarioInterventionRequest:

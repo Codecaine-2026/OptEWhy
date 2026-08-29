@@ -55,7 +55,7 @@ input {
 
 .mainGrid {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
   min-height: 0;
   overflow: hidden;
@@ -144,6 +144,29 @@ input {
   font-size: 12px;
 }
 
+.loopPager {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #5f6e76;
+  font-size: 11px;
+}
+
+.loopPager button {
+  border: 1px solid #c9d4d7;
+  border-radius: 5px;
+  padding: 3px 7px;
+  background: #ffffff;
+  color: #31454c;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.loopPager button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
 .panelHeader {
   display: flex;
   align-items: center;
@@ -175,6 +198,7 @@ input {
   background: #f7f9fa;
   line-height: 1.45;
   font-size: 14px;
+  white-space: pre-line;
 }
 
 .analysisDetails {

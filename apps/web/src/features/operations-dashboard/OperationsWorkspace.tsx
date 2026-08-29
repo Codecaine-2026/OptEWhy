@@ -14,6 +14,20 @@ export function OperationsWorkspace() {
   const [scenario, setScenario] = useState<ScenarioResponse | null>(null);
   const [scenarioExplanation, setScenarioExplanation] = useState("");
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceItem | null>(null);
+  const [loopIndex, setLoopIndex] = useState(0);
+  const activeLoop = visualization?.loops[loopIndex] ?? null;
+  const strongestPathNodeIds = visualization?.reasoningNodes
+    .filter((node) => node.reasoningStepIds.includes("path_1"))
+    .map((node) => node.id) ?? [];
+  const strongestPathEdgeIds = visualization?.reasoningEdges
+    .filter((edge) => edge.reasoningStepIds.includes("path_1"))
+    .map((edge) => edge.id) ?? [];
+  const activeNodeIds = activeLoop
+    ? [...new Set([...strongestPathNodeIds, ...activeLoop.nodeIds])]
+    : visualization?.highlightedNodes;
+  const activeEdgeIds = activeLoop
+    ? [...new Set([...strongestPathEdgeIds, ...activeLoop.edgeIds])]
+    : visualization?.highlightedEdges;
   const scenarioRows = scenario
     ? causalNodes.map((node) => {
         const baseline = scenario.baselineState[node.id] ?? 0;
@@ -45,6 +59,7 @@ export function OperationsWorkspace() {
           <CopilotPanel
             onResponse={(response) => {
               setVisualization(response.visualization);
+              setLoopIndex(0);
               setScenario(response.scenario ?? null);
               setScenarioExplanation(response.scenario ? response.answer : "");
             }}
@@ -55,13 +70,35 @@ export function OperationsWorkspace() {
         <section className="mapPanel">
           <div className="mapHeader">
             <h2>Causal Graph</h2>
-            <span>{visualization ? "Analysis highlights" : "8 modeled nodes"}</span>
+            {visualization?.loops.length ? (
+              <div className="loopPager" aria-label="Feedback loop pages">
+                <button
+                  type="button"
+                  onClick={() => setLoopIndex((current) => Math.max(0, current - 1))}
+                  disabled={loopIndex === 0}
+                >
+                  Previous
+                </button>
+                <span>Causal path + feedback loop {loopIndex + 1} / {visualization.loops.length}</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLoopIndex((current) => Math.min(visualization.loops.length - 1, current + 1))
+                  }
+                  disabled={loopIndex === visualization.loops.length - 1}
+                >
+                  Next
+                </button>
+              </div>
+            ) : (
+              <span>{visualization ? "Analysis highlights" : `${causalNodes.length} modeled nodes`}</span>
+            )}
           </div>
           <CausalMapCanvas
             nodes={causalNodes}
             edges={causalEdges}
-            highlightedNodeIds={visualization?.highlightedNodes}
-            highlightedEdgeIds={visualization?.highlightedEdges}
+            highlightedNodeIds={activeNodeIds}
+            highlightedEdgeIds={activeEdgeIds}
           />
         </section>
       </section>

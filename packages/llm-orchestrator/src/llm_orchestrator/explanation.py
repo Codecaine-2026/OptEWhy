@@ -10,10 +10,23 @@ class BackendGroundedExplanationBuilder:
         top_path = paths[0]
         path_text = " -> ".join(top_path.get("path", []))
         contribution = round(float(top_path.get("contributionRatio", 0.0)) * 100)
-        evidence_text = " Supporting evidence is available." if evidence else ""
-        return (
+        lines = [
             f"The strongest modeled causal path is {path_text}, "
             f"explaining approximately {contribution}% of the target KPI movement."
-            f"{evidence_text}"
+        ]
+        loops = causal_result.get("feedbackLoops", [])
+        ranked_loops = sorted(
+            (loop for loop in loops if isinstance(loop, dict) and loop.get("nodes")),
+            key=lambda loop: float(loop.get("strength", 0.0)),
+            reverse=True,
         )
+        loop_texts = [
+            " -> ".join(loop.get("nodes", []))
+            for loop in ranked_loops[:1]
+        ]
+        if loop_texts:
+            lines.append("Most important feedback loop: " + loop_texts[0] + ".")
 
+        if evidence:
+            lines.append("Supporting evidence is available.")
+        return "\n".join(lines)

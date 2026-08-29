@@ -9,7 +9,7 @@ describe("OperationsWorkspace", () => {
 
     expect(screen.getByText("AI Copilot")).toBeTruthy();
     expect(screen.getByText("Causal Graph")).toBeTruthy();
-    expect(screen.getByLabelText("8-node causal system map")).toBeTruthy();
+    expect(screen.getByLabelText("9-node causal system map")).toBeTruthy();
     expect(screen.queryByText("Scenario Impact")).toBeNull();
     expect(screen.queryByText("Evidence")).toBeNull();
     expect(screen.queryByText("Scenario Composer")).toBeNull();
