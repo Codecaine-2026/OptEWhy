@@ -294,6 +294,16 @@ th {
   font-weight: 700;
 }
 
+.impactRow--decreased {
+  background: #fff1f0;
+  color: #b42318;
+}
+
+.impactRow--increased {
+  background: #ecfdf3;
+  color: #067647;
+}
+
 .quickPromptArea,
 .citationPills {
   display: flex;

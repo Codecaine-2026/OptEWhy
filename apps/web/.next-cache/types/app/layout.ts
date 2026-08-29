@@ -1,4 +1,4 @@
-// File: C:\Users\jeff6\OneDrive\Desktop\Luke\OptEWhy\apps\web\src\app\layout.tsx
+// File: /Users/doyeon/Desktop/PSA Codesprint/OptEWhy/apps/web/src/app/layout.tsx
 import * as entry from '../../../src/app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

@@ -24,7 +24,16 @@ export function ScenarioImpactTable({ rows, scenarioExplanation }: Props) {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.kpi}>
+            <tr
+              key={row.kpi}
+              className={
+                Number(row.delta) < 0
+                  ? "impactRow--decreased"
+                  : Number(row.delta) > 0
+                    ? "impactRow--increased"
+                    : undefined
+              }
+            >
               <td>{row.kpi}</td>
               <td>{row.baseline}</td>
               <td>{row.scenario}</td>
