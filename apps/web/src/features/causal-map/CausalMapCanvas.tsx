@@ -50,16 +50,16 @@ export function CausalMapCanvas({
       <svg viewBox="0 0 440 650" role="img">
         <defs>
           <marker id="positiveArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-            <path d="M0,0 L8,4 L0,8 Z" fill="#1f8a70" />
+            <path d="M0,0 L8,4 L0,8 Z" fill="#1c6f9b" />
           </marker>
           <marker id="positiveArrowMuted" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-            <path d="M0,0 L8,4 L0,8 Z" fill="#1f8a70" opacity="0.16" />
+            <path d="M0,0 L8,4 L0,8 Z" fill="#1c6f9b" opacity="0.16" />
           </marker>
           <marker id="negativeArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-            <path d="M0,0 L8,4 L0,8 Z" fill="#b33a3a" />
+            <path d="M0,0 L8,4 L0,8 Z" fill="#dc2626" />
           </marker>
           <marker id="negativeArrowMuted" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-            <path d="M0,0 L8,4 L0,8 Z" fill="#b33a3a" opacity="0.16" />
+            <path d="M0,0 L8,4 L0,8 Z" fill="#dc2626" opacity="0.16" />
           </marker>
         </defs>
         {edges.map((edge) => {
@@ -76,7 +76,7 @@ export function CausalMapCanvas({
             <line
               key={edge.id}
               {...points}
-              stroke={isPositive ? "#1f8a70" : "#b33a3a"}
+              stroke={isPositive ? "#1c6f9b" : "#dc2626"}
               strokeWidth={Math.max(2, Math.abs(edge.weight) * 7) + (isHighlighted ? 1.5 : 0)}
               strokeLinecap="round"
               opacity={hasHighlights && !isHighlighted ? 0.16 : 0.9}
@@ -99,8 +99,8 @@ export function CausalMapCanvas({
                 width={nodeWidth}
                 height={nodeHeight}
                 rx="8"
-                fill={node.abnormality >= 0 ? "#f8faf8" : "#fff7f7"}
-                stroke={node.abnormality >= 0 ? "#1f8a70" : "#b33a3a"}
+                fill={node.abnormality >= 0 ? "#eff9f7" : "#fff1f2"}
+                stroke={node.abnormality >= 0 ? "#1c6f9b" : "#dc2626"}
                 strokeWidth={1.5 + Math.abs(node.abnormality) * 2 + (isHighlighted ? 1.5 : 0)}
               />
               <text x="12" y="25" className="svgLabel">

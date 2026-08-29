@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Ship } from "lucide-react";
+import { Download } from "lucide-react";
 import { useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { CausalMapCanvas } from "@/features/causal-map/CausalMapCanvas";
@@ -47,6 +47,11 @@ export function OperationsWorkspace() {
         };
       })
     : [];
+  const reportTimestamp = new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(new Date());
+  const dominantPath = analysis?.causalResult.dominantPaths[0];
 
   async function handleExport() {
     if (!exportReportRef.current || !analysis) {
@@ -64,7 +69,7 @@ export function OperationsWorkspace() {
     <main className="workspace">
       <header className="topbar">
         <div className="brand">
-          <Ship size={22} />
+          <img className="brandLogo" src="/assets/PSA_logo.jpeg" alt="PSA logo" />
           <div>
             <strong>OptEWhy</strong>
             <span>Port operations copilot</span>
@@ -147,20 +152,86 @@ export function OperationsWorkspace() {
       />
       {analysis ? (
         <div className="pdfExportReport" ref={exportReportRef} aria-hidden="true">
-          <header>
-            <h1>OptEWhy Reasoning Report</h1>
-            <p>{analysis.intent.replaceAll("_", " ")}</p>
+          <header className="reportMasthead" data-pdf-block>
+            <div className="reportIdentity">
+              <img className="reportLogo" src="/assets/PSA_logo.jpeg" alt="PSA logo" />
+              <div>
+                <p className="reportKicker">Operational intelligence brief</p>
+                <h1>Reasoning Report</h1>
+                <p className="reportSubtitle">Causal analysis for port operations</p>
+              </div>
+            </div>
+            <dl className="reportMetadata">
+              <div>
+                <dt>Analysis ID</dt>
+                <dd>{analysis.analysisId}</dd>
+              </div>
+              <div>
+                <dt>Generated</dt>
+                <dd>{reportTimestamp}</dd>
+              </div>
+              <div>
+                <dt>Analysis type</dt>
+                <dd>{analysis.intent.replaceAll("_", " ")}</dd>
+              </div>
+            </dl>
           </header>
-          <section>
-            <h2>AI analysis</h2>
-            <ReactMarkdown>{analysis.answer}</ReactMarkdown>
+          <section className="reportMetricGrid" aria-label="Analysis summary" data-pdf-block>
+            <div className="reportMetric">
+              <span>Target KPI</span>
+              <strong>{analysis.causalResult.targetNodeId.replaceAll("_", " ")}</strong>
+            </div>
+            <div className="reportMetric">
+              <span>Primary path contribution</span>
+              <strong>{dominantPath ? `${Math.round(dominantPath.contributionRatio * 100)}%` : "N/A"}</strong>
+            </div>
+            <div className="reportMetric">
+              <span>Supporting evidence</span>
+              <strong>{analysis.evidence.length} sources</strong>
+            </div>
           </section>
-          <section>
+          <section className="reportSection">
+            <div className="reportSectionHeader" data-pdf-block>
+              <p className="reportSectionLabel">Executive interpretation</p>
+              <h2>AI analysis</h2>
+            </div>
+            <ReactMarkdown
+              components={{
+                h1: ({ children }) => <h1 data-pdf-block>{children}</h1>,
+                h2: ({ children }) => <h2 data-pdf-block>{children}</h2>,
+                h3: ({ children }) => <h3 data-pdf-block>{children}</h3>,
+                p: ({ children }) => <p data-pdf-block>{children}</p>,
+                ul: ({ children }) => <ul data-pdf-block>{children}</ul>,
+                ol: ({ children }) => <ol data-pdf-block>{children}</ol>,
+                pre: ({ children }) => <pre data-pdf-block>{children}</pre>
+              }}
+            >
+              {analysis.answer}
+            </ReactMarkdown>
+          </section>
+          <section className="reportSection" data-pdf-block>
+            <p className="reportSectionLabel">Traceable model output</p>
             <h2>Reasoning trace</h2>
-            <AnalysisDetails evidence={analysis.evidence} reasoningTrace={analysis.reasoningTrace} />
+            <ol className="reportTraceList">
+              {analysis.reasoningTrace.steps.map((step) => (
+                <li key={step.id}>
+                  <div>
+                    <strong>{step.stepType === "dominant_path" ? "Dominant causal path" : "Feedback loop"}</strong>
+                    <span>{step.summary}</span>
+                  </div>
+                  {step.confidence !== null && step.confidence !== undefined ? (
+                    <small>Confidence {Math.round(step.confidence * 100)}%</small>
+                  ) : null}
+                </li>
+              ))}
+            </ol>
           </section>
-          <section>
+          <section className="reportSection reportGraphSection" data-pdf-block>
+            <p className="reportSectionLabel">Model view</p>
             <h2>Causal graph</h2>
+            <p className="reportCaption">
+              Highlighted nodes and edges show the dominant path and currently selected feedback loop.
+            </p>
             <CausalMapCanvas
               nodes={causalNodes}
               edges={causalEdges}
@@ -168,6 +239,42 @@ export function OperationsWorkspace() {
               highlightedEdgeIds={activeEdgeIds}
             />
           </section>
+          {analysis.evidence.length ? (
+            <section className="reportSection" data-pdf-block>
+              <p className="reportSectionLabel">Evidence register</p>
+              <h2>Supporting sources</h2>
+              <table className="reportEvidenceTable">
+                <thead>
+                  <tr>
+                    <th>Source</th>
+                    <th>Excerpt</th>
+                    <th>Relevance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analysis.evidence.map((item) => (
+                    <tr key={item.chunkId}>
+                      <td>
+                        {item.sourceUrl ? (
+                          <a href={item.sourceUrl} target="_blank" rel="noreferrer">
+                            {item.sourceTitle ?? item.documentId}
+                          </a>
+                        ) : (
+                          item.sourceTitle ?? item.documentId
+                        )}
+                      </td>
+                      <td>{item.text}</td>
+                      <td>{Math.round(item.score * 100)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          ) : null}
+          <footer className="reportFooter" data-pdf-block>
+            <span>OptEWhy • Causal reasoning and scenario simulation</span>
+            <span>Generated from the current analysis response</span>
+          </footer>
         </div>
       ) : null}
     </main>
