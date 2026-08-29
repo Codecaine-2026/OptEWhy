@@ -914,31 +914,24 @@ Audit record example:
 }
 ```
 
-## 15. Prototype Scope
+## 15. Video Demo MVP Scope
 
-The first prototype should be narrow enough to validate the core idea.
+The MVP is scoped specifically for a high-impact, reliable video demonstration and operational walkthrough. Complex offline training, multi-terminal routing, and multi-tenant infrastructure are replaced with deterministic, high-fidelity mock services.
 
-Recommended prototype scope:
+### Core Demo Storyline (3-4 Minute Walkthrough)
+1. **Anomaly State**: The workspace displays an active bottleneck: Vessel A productivity drop linked to Yard Block B congestion.
+2. **Causal Diagnosis**: The operator asks *"Why is Vessel A productivity low?"* The AI Copilot identifies the dominant causal chain (`Yard Block B Density ➔ RTG Workload ➔ Truck Congestion ➔ QC Waiting ➔ QC Productivity`) and highlights the corresponding paths and loops directly on the graph.
+3. **Evidence Inspection**: The operator clicks inline citations to view grounded operational evidence (e.g., equipment maintenance logs and shift handover notes).
+4. **What-If Simulation**: The operator simulates an intervention (*"Move 15% containers from Block B to Block D"*). The graph updates node states dynamically, and the KPI impact table compares baseline vs. simulated outcome with clear tradeoff warnings.
 
-- One terminal.
-- One vessel operation use case.
-- Three subsystems: Quay, Yard, Internal Transport.
-- Around 20 to 40 FCM nodes.
-- Around 50 to 100 causal edges.
-- Static expert weights with simple dynamic regimes.
-- CSV or synthetic operational data ingestion.
-- RAG over a small document set.
-- Chat-based explanation.
-- Interactive graph with highlighted paths.
-- Two or three scenario templates.
+### Scope Boundaries for Video MVP
+- **Terminal & Subsystems**: 1 terminal, 3 core subsystems (Quay, Yard, Transport) with ~8-12 representative nodes and ~10-15 causal edges.
+- **Data & State**: In-memory deterministic port snapshot (Vessel A, Yard Blocks B/D, QC4).
+- **Causal Computation**: Deterministic FCM engine with pre-calibrated weights for consistent, repeatable propagation.
+- **RAG Evidence**: In-memory evidence store with 3-5 realistic pre-seeded documents.
+- **LLM Layer**: Structured query parsing & explanation generation with fallback support for instant, zero-delay responses during recording.
+- **Frontend**: Next.js workspace with reactive causal graph highlighting, Copilot chat, evidence drawer, and before/after KPI impact table.
 
-Prototype scenario examples:
-
-- Reduce Yard Block B density.
-- Add one QC to Vessel A.
-- Simulate QC4 one-hour outage.
-- Increase internal truck allocation.
-- Change dispatch priority for Vessel A.
 
 ## 16. Initial Implementation Plan
 
@@ -1038,16 +1031,16 @@ Prototype scenario examples:
 - What operational decisions can the system recommend but not execute?
 - Which language should the operator-facing UI use by default?
 
-## 20. Definition of Done for MVP
+## 20. Definition of Done for Video-Ready MVP
+ 
+The Video-Ready MVP is complete when the following end-to-end user journey works flawlessly on local recording:
+ 
+1. **Instant Cold Start**: `make dev` starts the frontend and mock backend with zero required external database or API keys.
+2. **Deterministic Baseline State**: Opening `localhost:3000` renders the port subsystem graph with visual anomalies clearly indicated.
+3. **Causal Explanation Flow**: Querying *"Why is Vessel A productivity low?"* yields an instant (<1s) ranked explanation with percentage contributions.
+4. **Interactive Graph Highlighting**: Graph automatically highlights the active causal path and feedback loop with animated/accented edges and node borders.
+5. **Grounded Evidence Drawer**: Clicking an evidence citation opens a slide-out drawer showing realistic snippets from maintenance and shift reports.
+6. **Scenario Simulation Flow**: Entering *"Move 15% of Block B containers to Block D"* triggers state propagation, visual node updates, and populates the Before/After KPI comparison table.
+7. **Visual Polish & Stability**: Clean UI styling, readable typography, responsive layouts, and 100% reproducible execution without timeouts or network errors.
 
-The MVP is complete when an operator can:
-
-1. Ask why a selected KPI is abnormal.
-2. Receive a ranked causal explanation with path contribution percentages.
-3. Inspect the highlighted causal path on an interactive graph.
-4. View supporting operational evidence from reports or logs.
-5. Enter a what-if scenario in natural language.
-6. See predicted system-wide impacts and side effects.
-7. Compare baseline and scenario outcomes.
-8. Trace every answer back to model version, data snapshot, and evidence sources.
 

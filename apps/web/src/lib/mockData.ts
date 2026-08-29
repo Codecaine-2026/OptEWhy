@@ -55,9 +55,17 @@ export const causalEdges: CausalEdge[] = [
 ];
 
 export const impactRows: ImpactRow[] = [
-  { kpi: "Yard Density", baseline: "85%", scenario: "72%", delta: "-13%" },
-  { kpi: "Truck Travel Time", baseline: "31 min", scenario: "29 min", delta: "-6%" },
-  { kpi: "QC Waiting", baseline: "18 min", scenario: "17 min", delta: "-4%" },
-  { kpi: "QC Productivity", baseline: "27.4 mph", scenario: "28.4 mph", delta: "+3.7%" },
-  { kpi: "Vessel Turnaround", baseline: "18h 20m", scenario: "18h 01m", delta: "-19 min" }
+  { kpi: "Yard Density", baseline: "85%", scenario: "72%", delta: "-13%", type: "improvement" },
+  { kpi: "Truck Travel Time", baseline: "31 min", scenario: "29 min", delta: "-6%", type: "improvement" },
+  { kpi: "QC Waiting", baseline: "18 min", scenario: "17 min", delta: "-4%", type: "improvement" },
+  { kpi: "QC Productivity", baseline: "27.4 mph", scenario: "28.4 mph", delta: "+3.7%", type: "improvement" },
+  { kpi: "Vessel Turnaround", baseline: "18h 20m", scenario: "18h 01m", delta: "-19 min", type: "improvement" },
+  {
+    kpi: "Gate Retrieval Delay",
+    baseline: "12.0 min",
+    scenario: "12.3 min",
+    delta: "+2.0%",
+    type: "warning",
+    description: "Tradeoff: Block D container transfer load"
+  }
 ];

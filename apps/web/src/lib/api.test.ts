@@ -52,7 +52,7 @@ describe("submitCopilotQuery", () => {
     expect(result.intent).toBe("root_mechanism_analysis");
   });
 
-  it("surfaces an API error to the Copilot UI", async () => {
+  it("surfaces an API error to the Copilot UI when fallbackToMock is disabled", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -65,5 +65,35 @@ describe("submitCopilotQuery", () => {
     await expect(submitCopilotQuery("Explain the delay")).rejects.toThrow(
       "Intent parsing service is temporarily unavailable"
     );
+  });
+
+  it("returns instant deterministic mock payload when fallbackToMock is enabled and network fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("Failed to fetch"))
+    );
+
+    const result = await submitCopilotQuery("What if we move 15% of Block B containers to Block D?", {
+      fallbackToMock: true
+    });
+
+    expect(result.intent).toBe("scenario_simulation");
+    expect(result.answer).toContain("Simulated Intervention");
+    expect(result.answer).toContain("Tradeoff Notice");
+    expect(result.visualization?.highlightedNodes).toContain("yard_density");
+  });
+
+  it("handles feedback loop queries in mock mode", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("Network offline"))
+    );
+
+    const result = await submitCopilotQuery("Explain the feedback loop causing congestion", {
+      fallbackToMock: true
+    });
+
+    expect(result.intent).toBe("root_mechanism_analysis");
+    expect(result.answer).toContain("Root Mechanism Analysis");
   });
 });

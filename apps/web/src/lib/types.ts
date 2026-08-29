@@ -20,6 +20,8 @@ export type ImpactRow = {
   baseline: string;
   scenario: string;
   delta: string;
+  type?: "improvement" | "warning" | "neutral";
+  description?: string;
 };
 
 export type DominantPath = {
@@ -109,12 +111,24 @@ export type VisualizationPayload = {
   loops: ReasoningLoop[];
 };
 
+export type EvidenceItem = {
+  documentId: string;
+  chunkId?: string;
+  sourceTitle?: string;
+  sourceUrl?: string;
+  publisher?: string;
+  subsystem?: string;
+  text: string;
+  score?: number;
+};
+
 export type QueryResponse = {
   analysisId: string;
   intent: string;
   answer: string;
   causalResult: CausalResult;
-  evidence: Record<string, unknown>[];
+  evidence: EvidenceItem[];
   reasoningTrace: ReasoningTrace;
   visualization: VisualizationPayload;
 };
+

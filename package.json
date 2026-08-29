@@ -10,5 +10,8 @@
     "build": "npm --workspace apps/web run build",
     "lint": "npm --workspace apps/web run lint",
     "test": "npm --workspace apps/web run test"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-darwin-x64": "*"
   }
 }

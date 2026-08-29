@@ -55,7 +55,10 @@ class Settings:
             raise ValueError("GEMINI_MODEL cannot be empty")
 
         if mode == IntentParserMode.GEMINI and api_key is None:
-            raise ValueError("GEMINI_API_KEY is required when INTENT_PARSER_MODE=gemini")
+            if fallback_value == "true":
+                mode = IntentParserMode.MOCK
+            else:
+                raise ValueError("GEMINI_API_KEY is required when INTENT_PARSER_MODE=gemini")
 
         return cls(
             intent_parser_mode=mode,

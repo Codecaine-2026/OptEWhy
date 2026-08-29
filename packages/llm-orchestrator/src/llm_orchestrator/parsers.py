@@ -33,15 +33,23 @@ class MockIntentParser:
         }
         if lowered.strip() in greetings:
             return StructuredQuery(intent=IntentType.CASUAL_CONVERSATION, raw_message=message)
-        if "what if" in lowered or "move" in lowered or "add" in lowered:
-            return StructuredQuery(intent=IntentType.SCENARIO_SIMULATION, raw_message=message)
-        if "report" in lowered or "evidence" in lowered:
-            return StructuredQuery(intent=IntentType.EVIDENCE_LOOKUP, raw_message=message)
-        if "how can" in lowered or "recommend" in lowered:
+        if "what if" in lowered or "move" in lowered or "add" in lowered or "simulate" in lowered or "transfer" in lowered:
+            return StructuredQuery(
+                intent=IntentType.SCENARIO_SIMULATION,
+                target=Target(node_id="yard_density", entity_type="yard_block", entity_id="block_b"),
+                raw_message=message,
+            )
+        if "report" in lowered or "evidence" in lowered or "crane 4" in lowered or "qc4" in lowered or "notice" in lowered:
+            return StructuredQuery(
+                intent=IntentType.EVIDENCE_LOOKUP,
+                target=Target(node_id="qc_productivity", entity_type="quay_crane", entity_id="qc4"),
+                raw_message=message,
+            )
+        if "how can" in lowered or "recommend" in lowered or "mitigate" in lowered:
             return StructuredQuery(intent=IntentType.RECOMMENDATION, raw_message=message)
         if "would" in lowered and "if" in lowered:
             return StructuredQuery(intent=IntentType.COUNTERFACTUAL, raw_message=message)
-        if "causing" in lowered or "feedback" in lowered or "loop" in lowered:
+        if "causing" in lowered or "feedback" in lowered or "loop" in lowered or "congestion" in lowered or "mechanism" in lowered:
             return StructuredQuery(
                 intent=IntentType.ROOT_MECHANISM_ANALYSIS,
                 target=Target(
