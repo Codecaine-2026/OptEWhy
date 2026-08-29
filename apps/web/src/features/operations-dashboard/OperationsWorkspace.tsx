@@ -1,18 +1,135 @@
 "use client";
 
 import { Download } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { CausalMapCanvas } from "@/features/causal-map/CausalMapCanvas";
 import { AnalysisDetails } from "@/features/copilot/AnalysisDetails";
 import { CopilotPanel } from "@/features/copilot/CopilotPanel";
 import { EvidenceDrawer } from "@/features/evidence/EvidenceDrawer";
 import { ScenarioImpactTable } from "@/features/scenario-simulator/ScenarioImpactTable";
-import { causalEdges, causalNodes } from "@/lib/mockData";
+import { getCurrentGraph } from "@/lib/api";
 import { downloadElementAsPdf } from "@/lib/exportPdf";
-import type { EvidenceItem, QueryResponse, ScenarioResponse, VisualizationPayload } from "@/lib/types";
+import type {
+  CausalEdge,
+  CausalNode,
+  EvidenceItem,
+  GraphResponse,
+  QueryResponse,
+  ScenarioResponse,
+  VisualizationPayload
+} from "@/lib/types";
+
+const graphColumns = 4;
+const graphColumnWidth = 190;
+const graphRowHeight = 82;
+
+function layoutGraph(graph: GraphResponse, visibleNodeIds?: Set<string>) {
+  const visibleNodes = visibleNodeIds
+    ? graph.nodes.filter((node) => visibleNodeIds.has(node.id))
+    : graph.nodes;
+  const columns = visibleNodeIds
+    ? Math.min(3, Math.max(1, Math.ceil(Math.sqrt(visibleNodes.length))))
+    : graphColumns;
+  const nodes: CausalNode[] = visibleNodes.map((node, index) => ({
+    ...node,
+    x: 14 + (index % columns) * graphColumnWidth,
+    y: 12 + Math.floor(index / columns) * graphRowHeight
+  }));
+  const edges: CausalEdge[] = graph.edges
+    .filter(
+      (edge) =>
+        !visibleNodeIds ||
+        (visibleNodeIds.has(edge.sourceNodeId) && visibleNodeIds.has(edge.targetNodeId))
+    )
+    .map((edge) => ({
+      id: edge.id,
+      source: edge.sourceNodeId,
+      target: edge.targetNodeId,
+      weight: edge.weight,
+      polarity: edge.polarity
+    }));
+  return { nodes, edges };
+}
+
+function getScenarioInterventionNodeIds(scenario: ScenarioResponse) {
+  const interventions = scenario.structuredIntervention.interventions;
+  if (!Array.isArray(interventions)) {
+    return new Set<string>();
+  }
+  return new Set(
+    interventions.flatMap((intervention) => {
+      if (typeof intervention !== "object" || intervention === null) {
+        return [];
+      }
+      const interventionRecord = intervention as Record<string, unknown>;
+      const nodeId = interventionRecord.nodeId ?? interventionRecord.node_id;
+      return typeof nodeId === "string" ? [nodeId] : [];
+    })
+  );
+}
+
+function getScenarioPathNodeIds(
+  graph: GraphResponse,
+  interventionNodeIds: Set<string>,
+  targetNodeId: string
+) {
+  const incomingNodeIds = new Map<string, string[]>();
+  const outgoingNodeIds = new Map<string, string[]>();
+  for (const edge of graph.edges) {
+    incomingNodeIds.set(edge.targetNodeId, [
+      ...(incomingNodeIds.get(edge.targetNodeId) ?? []),
+      edge.sourceNodeId
+    ]);
+    outgoingNodeIds.set(edge.sourceNodeId, [
+      ...(outgoingNodeIds.get(edge.sourceNodeId) ?? []),
+      edge.targetNodeId
+    ]);
+  }
+
+  const ancestors = new Set([targetNodeId]);
+  const ancestorQueue = [targetNodeId];
+  while (ancestorQueue.length) {
+    const currentNodeId = ancestorQueue.shift();
+    if (!currentNodeId) {
+      continue;
+    }
+    for (const sourceNodeId of incomingNodeIds.get(currentNodeId) ?? []) {
+      if (!ancestors.has(sourceNodeId)) {
+        ancestors.add(sourceNodeId);
+        ancestorQueue.push(sourceNodeId);
+      }
+    }
+  }
+
+  if (!interventionNodeIds.size) {
+    return ancestors;
+  }
+
+  const interventionDescendants = new Set(interventionNodeIds);
+  const descendantQueue = [...interventionNodeIds];
+  while (descendantQueue.length) {
+    const currentNodeId = descendantQueue.shift();
+    if (!currentNodeId) {
+      continue;
+    }
+    for (const targetId of outgoingNodeIds.get(currentNodeId) ?? []) {
+      if (!interventionDescendants.has(targetId)) {
+        interventionDescendants.add(targetId);
+        descendantQueue.push(targetId);
+      }
+    }
+  }
+
+  const pathNodeIds = new Set(
+    [...ancestors].filter((nodeId) => interventionDescendants.has(nodeId))
+  );
+  return pathNodeIds.size ? pathNodeIds : ancestors;
+}
 
 export function OperationsWorkspace() {
+  const [graph, setGraph] = useState<GraphResponse | null>(null);
+  const [graphError, setGraphError] = useState("");
   const [visualization, setVisualization] = useState<VisualizationPayload | null>(null);
   const [scenario, setScenario] = useState<ScenarioResponse | null>(null);
   const [scenarioExplanation, setScenarioExplanation] = useState("");
@@ -21,6 +138,46 @@ export function OperationsWorkspace() {
   const [analysis, setAnalysis] = useState<QueryResponse | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const exportReportRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let isActive = true;
+    void getCurrentGraph()
+      .then((response) => {
+        if (isActive) {
+          setGraph(response);
+        }
+      })
+      .catch((error) => {
+        if (isActive) {
+          setGraphError(error instanceof Error ? error.message : "The causal graph could not be loaded.");
+        }
+      });
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const graphView = graph ? layoutGraph(graph) : { nodes: [], edges: [] };
+  const scenarioInterventionNodeIds = scenario
+    ? getScenarioInterventionNodeIds(scenario)
+    : new Set<string>();
+  const scenarioTargetNode = scenario
+    ? graphView.nodes
+        .filter((node) => !scenarioInterventionNodeIds.has(node.id))
+        .map((node) => {
+          const baseline = scenario.baselineState[node.id] ?? 0;
+          const simulated = scenario.scenarioState[node.id] ?? baseline;
+          return { node, absoluteDelta: Math.abs(simulated - baseline) };
+        })
+        .sort((left, right) => right.absoluteDelta - left.absoluteDelta)[0]?.node ?? null
+    : null;
+  const scenarioPathNodeIds = scenario && graph && scenarioTargetNode
+    ? getScenarioPathNodeIds(graph, scenarioInterventionNodeIds, scenarioTargetNode.id)
+    : null;
+  const displayedGraphView = graph
+    ? scenario
+      ? layoutGraph(graph, scenarioPathNodeIds ?? new Set<string>())
+      : graphView
+    : { nodes: [], edges: [] };
   const activeLoop = visualization?.loops[loopIndex] ?? null;
   const strongestPathNodeIds = visualization?.reasoningNodes
     .filter((node) => node.reasoningStepIds.includes("path_1"))
@@ -35,7 +192,7 @@ export function OperationsWorkspace() {
     ? [...new Set([...strongestPathEdgeIds, ...activeLoop.edgeIds])]
     : visualization?.highlightedEdges;
   const scenarioRows = scenario
-    ? causalNodes.map((node) => {
+    ? graphView.nodes.map((node) => {
         const baseline = scenario.baselineState[node.id] ?? 0;
         const simulated = scenario.scenarioState[node.id] ?? baseline;
         const delta = simulated - baseline;
@@ -107,7 +264,13 @@ export function OperationsWorkspace() {
         <section className="mapPanel">
           <div className="mapHeader">
             <h2>Causal Graph</h2>
-            {visualization?.loops.length ? (
+            {scenario ? (
+              <span>
+                {scenarioTargetNode
+                  ? `Path to ${scenarioTargetNode.label}`
+                  : "No eligible affected node"}
+              </span>
+            ) : visualization?.loops.length ? (
               <div className="loopPager" aria-label="Feedback loop pages">
                 <button
                   type="button"
@@ -128,15 +291,29 @@ export function OperationsWorkspace() {
                 </button>
               </div>
             ) : (
-              <span>{visualization ? "Analysis highlights" : `${causalNodes.length} modeled nodes`}</span>
+              <span>
+                {visualization
+                  ? "Analysis highlights"
+                  : graph
+                    ? `${graph.nodes.length} modeled nodes`
+                    : "Loading graph..."}
+              </span>
             )}
           </div>
-          <CausalMapCanvas
-            nodes={causalNodes}
-            edges={causalEdges}
-            highlightedNodeIds={activeNodeIds}
-            highlightedEdgeIds={activeEdgeIds}
-          />
+          {graph ? (
+            <CausalMapCanvas
+              nodes={displayedGraphView.nodes}
+              edges={displayedGraphView.edges}
+              fitToContent
+              focusedNodeId={scenarioTargetNode?.id}
+              highlightedNodeIds={activeNodeIds}
+              highlightedEdgeIds={activeEdgeIds}
+            />
+          ) : (
+            <div className="graphLoading" role="status">
+              {graphError || "Loading the causal graph from the backend..."}
+            </div>
+          )}
         </section>
       </section>
 
@@ -233,8 +410,10 @@ export function OperationsWorkspace() {
               Highlighted nodes and edges show the dominant path and currently selected feedback loop.
             </p>
             <CausalMapCanvas
-              nodes={causalNodes}
-              edges={causalEdges}
+              nodes={displayedGraphView.nodes}
+              edges={displayedGraphView.edges}
+              fitToContent
+              focusedNodeId={scenarioTargetNode?.id}
               highlightedNodeIds={activeNodeIds}
               highlightedEdgeIds={activeEdgeIds}
             />

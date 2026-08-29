@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { simulateScenario, submitCopilotQuery } from "./api";
+import { getCurrentGraph, simulateScenario, submitCopilotQuery } from "./api";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -101,5 +101,33 @@ describe("submitCopilotQuery", () => {
         value: 0.15
       }
     });
+  });
+});
+
+describe("getCurrentGraph", () => {
+  it("loads the complete graph from the FastAPI graph endpoint", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        graphId: "graph_terminal_alpha_reference",
+        terminalId: "terminal_alpha",
+        nodes: Array.from({ length: 26 }, (_, index) => ({
+          id: `node_${index}`,
+          label: `Node ${index}`,
+          subsystem: "test",
+          abnormality: 0
+        })),
+        edges: []
+      })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getCurrentGraph();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/graph/current",
+      { cache: "no-store" }
+    );
+    expect(result.nodes).toHaveLength(26);
   });
 });

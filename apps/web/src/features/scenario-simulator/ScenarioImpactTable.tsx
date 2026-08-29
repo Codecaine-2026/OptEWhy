@@ -13,35 +13,37 @@ export function ScenarioImpactTable({ rows, scenarioExplanation }: Props) {
         <span>Chat-requested simulation</span>
       </div>
       <p className="scenarioStatus" role="status">{scenarioExplanation}</p>
-      <table>
-        <thead>
-          <tr>
-            <th>KPI</th>
-            <th>Baseline</th>
-            <th>Scenario</th>
-            <th>Delta</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={row.kpi}
-              className={
-                Number(row.delta) < 0
-                  ? "impactRow--decreased"
-                  : Number(row.delta) > 0
-                    ? "impactRow--increased"
-                    : undefined
-              }
-            >
-              <td>{row.kpi}</td>
-              <td>{row.baseline}</td>
-              <td>{row.scenario}</td>
-              <td>{row.delta}</td>
+      <div className="impactTableScroll">
+        <table>
+          <thead>
+            <tr>
+              <th>KPI</th>
+              <th>Baseline</th>
+              <th>Scenario</th>
+              <th>Delta</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr
+                key={row.kpi}
+                className={
+                  Number(row.delta) < 0
+                    ? "impactRow--decreased"
+                    : Number(row.delta) > 0
+                      ? "impactRow--increased"
+                      : undefined
+                }
+              >
+                <td>{row.kpi}</td>
+                <td>{row.baseline}</td>
+                <td>{row.scenario}</td>
+                <td>{row.delta}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

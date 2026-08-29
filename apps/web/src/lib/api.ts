@@ -1,4 +1,9 @@
-import type { QueryResponse, ScenarioIntervention, ScenarioResponse } from "./types";
+import type {
+  GraphResponse,
+  QueryResponse,
+  ScenarioIntervention,
+  ScenarioResponse
+} from "./types";
 
 type ApiErrorResponse = {
   detail?: string;
@@ -8,6 +13,17 @@ const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:80
   /\/$/,
   ""
 );
+
+export async function getCurrentGraph() {
+  const response = await fetch(`${apiBaseUrl}/api/graph/current`, { cache: "no-store" });
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => ({}))) as ApiErrorResponse;
+    throw new Error(error.detail ?? `Graph request failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as GraphResponse;
+}
 
 export async function submitCopilotQuery(message: string) {
   const response = await fetch(`${apiBaseUrl}/api/query`, {

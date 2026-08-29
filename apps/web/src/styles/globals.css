@@ -69,7 +69,6 @@ input {
 
 .brand span,
 .panelHeader span,
-.svgMeta,
 .mapHeader span {
   color: var(--muted);
   font-size: 12px;
@@ -120,6 +119,19 @@ input {
 .panel,
 .impactTable {
   padding: 10px 14px;
+}
+
+.impactTable {
+  display: flex;
+  flex-direction: column;
+  max-height: 20dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.impactTableScroll {
+  min-height: 0;
+  overflow: auto;
 }
 
 .scenarioControls {
@@ -632,15 +644,22 @@ textarea {
   min-height: 0;
 }
 
-.svgLabel {
-  fill: var(--navy-950);
-  font-size: 12px;
-  font-weight: 700;
+.graphLoading {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 24px;
+  border: 1px solid #ccd6d9;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #5f6e76;
+  font-size: 13px;
 }
 
-.svgMeta {
-  fill: var(--muted);
-  font-size: 11px;
+.svgLabel {
+  fill: #172126;
+  font-size: 9px;
+  font-weight: 700;
 }
 
 .bottomPanel {

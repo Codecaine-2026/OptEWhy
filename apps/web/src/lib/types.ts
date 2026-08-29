@@ -15,6 +15,19 @@ export type CausalEdge = {
   polarity: "positive" | "negative";
 };
 
+export type GraphResponse = {
+  graphId: string;
+  terminalId: string;
+  nodes: Array<Pick<CausalNode, "id" | "label" | "subsystem" | "abnormality">>;
+  edges: Array<{
+    id: string;
+    sourceNodeId: string;
+    targetNodeId: string;
+    weight: number;
+    polarity: "positive" | "negative";
+  }>;
+};
+
 export type ImpactRow = {
   kpi: string;
   baseline: string;

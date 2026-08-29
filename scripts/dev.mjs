@@ -77,7 +77,13 @@ if (
 const childEnvironment = { ...process.env };
 appendPythonPath(childEnvironment);
 
-const pythonCommand = process.env.PYTHON ?? (process.platform === "win32" ? "python" : "python3");
+const localPythonCommand =
+  process.platform === "win32"
+    ? join(repoRoot, ".venv", "Scripts", "python.exe")
+    : join(repoRoot, ".venv", "bin", "python");
+const fallbackPythonCommand = process.platform === "win32" ? "python" : "python3";
+const pythonCommand = process.env.PYTHON ??
+  (existsSync(localPythonCommand) ? localPythonCommand : fallbackPythonCommand);
 const npmCommand = process.platform === "win32" ? "cmd.exe" : "npm";
 const npmArguments =
   process.platform === "win32"
