@@ -86,6 +86,33 @@ describe("CopilotPanel", () => {
     expect(screen.queryByText("Reasoning trace")).toBeNull();
   });
 
+  it("renders GitHub-Flavored Markdown tables in scenario responses", async () => {
+    submitCopilotQueryMock.mockResolvedValue({
+      answer: "## Projected effects\n\n| KPI | Delta |\n| --- | ---: |\n| Yard density | -12% |",
+      intent: "scenario_simulation",
+      analysisId: "analysis_demo_001",
+      causalResult: { targetNodeId: "yard_density", observedDelta: 0, dominantPaths: [], feedbackLoops: [] },
+      evidence: [],
+      reasoningTrace: { targetNodeId: "yard_density", steps: [] },
+      visualization: {
+        highlightedNodes: [],
+        highlightedEdges: [],
+        focusSubgraphId: null,
+        reasoningNodes: [],
+        reasoningEdges: [],
+        loops: []
+      }
+    });
+    render(<CopilotPanel />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Send query" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("columnheader", { name: "KPI" })).toBeTruthy();
+      expect(screen.getByRole("cell", { name: "Yard density" })).toBeTruthy();
+    });
+  });
+
   it("shares the full analysis response with its parent", async () => {
     const response = {
       answer: "QC waiting is the strongest modeled driver.",

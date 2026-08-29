@@ -1,4 +1,5 @@
 import type { EvidenceItem, ReasoningTrace } from "@/lib/types";
+import { feedbackLoopLabel } from "@/lib/loopLabel";
 
 type Props = {
   evidence: EvidenceItem[];
@@ -17,7 +18,7 @@ export function AnalysisDetails({ evidence, reasoningTrace }: Props) {
         <ol>
           {reasoningTrace.steps.map((step) => (
             <li key={step.id}>
-              <strong>{step.stepType === "dominant_path" ? "Causal path" : "Feedback loop"}</strong>
+              <strong>{step.stepType === "dominant_path" ? "Causal path" : feedbackLoopLabel(step.loopType)}</strong>
               <span>{step.summary}</span>
             </li>
           ))}

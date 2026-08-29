@@ -8,7 +8,6 @@ from llm_orchestrator.parsers import FallbackIntentParser, IntentParser, MockInt
 
 from api.config import IntentParserMode, Settings
 from api.services.graph_repository import (
-    DemoGraphRepository,
     GraphRepository,
     PostgresGraphRepository,
 )
@@ -43,11 +42,12 @@ def get_intent_parser() -> IntentParser:
 @lru_cache
 def get_graph_repository() -> GraphRepository:
     database_url = os.getenv("DATABASE_URL") or None
-    if os.getenv("GRAPH_REPOSITORY_MODE", "demo").lower() == "postgres":
-        if database_url is None:
-            raise ValueError("DATABASE_URL is required when GRAPH_REPOSITORY_MODE=postgres")
-        return PostgresGraphRepository(database_url)
-    return DemoGraphRepository()
+    mode = os.getenv("GRAPH_REPOSITORY_MODE", "postgres").lower()
+    if mode != "postgres":
+        raise ValueError("GRAPH_REPOSITORY_MODE must be postgres; demo graph data is disabled")
+    if database_url is None:
+        raise ValueError("DATABASE_URL is required when GRAPH_REPOSITORY_MODE=postgres")
+    return PostgresGraphRepository(database_url)
 
 
 def get_query_orchestrator() -> QueryOrchestrator:

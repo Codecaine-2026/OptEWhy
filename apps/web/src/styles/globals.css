@@ -178,6 +178,58 @@ input {
   font-size: 12px;
 }
 
+.scenarioReasoning {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--blue-100);
+  border-left: 4px solid var(--blue-600);
+  border-radius: 7px;
+  background: var(--blue-50);
+}
+
+.scenarioReasoning h3 {
+  margin: 0 0 5px;
+  color: var(--navy-800);
+  font-size: 12px;
+}
+
+.scenarioReasoning p {
+  margin: 0;
+  color: var(--navy-800);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.scenarioChain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin: 8px 0 6px;
+}
+
+.scenarioChainStep {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--navy-800);
+  font-size: 11px;
+}
+
+.scenarioChainStep > span {
+  color: var(--blue-600);
+  font-size: 14px;
+}
+
+.scenarioChainStep b {
+  color: var(--blue-700);
+  font-size: 14px;
+}
+
+.scenarioReasoningConclusion {
+  color: var(--muted) !important;
+}
+
 .loopPager {
   display: flex;
   align-items: center;
@@ -253,6 +305,12 @@ input {
   opacity: 0.6;
 }
 
+.exportError {
+  color: #b33a3a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .answerBox > :first-child {
   margin-top: 0;
 }
@@ -321,10 +379,22 @@ input {
   font-weight: 700;
 }
 
+.answerBox table {
+  margin: 10px 0;
+  border: 1px solid var(--blue-100);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.answerBox th {
+  background: var(--blue-50);
+  color: var(--navy-800);
+}
+
 .pdfExportReport {
   position: fixed;
   top: 0;
-  left: -10000px;
+  left: calc(100vw + 48px);
   width: 860px;
   padding: 42px;
   background: #ffffff;
@@ -510,7 +580,8 @@ input {
 }
 
 .reportGraphSection .causalCanvas {
-  max-width: 580px;
+  width: 70%;
+  max-width: 406px;
   margin: 0 auto;
   border: 1px solid var(--blue-100);
   background: #f6fbfa;
@@ -530,7 +601,16 @@ input {
   font-size: 12px;
 }
 
-.reportEvidenceTable th {
+.reportScenarioTable,
+.reportMarkdownTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.reportEvidenceTable th,
+.reportScenarioTable th,
+.reportMarkdownTable th {
   padding: 9px;
   background: var(--blue-50);
   color: var(--navy-800);
@@ -539,7 +619,9 @@ input {
   text-transform: uppercase;
 }
 
-.reportEvidenceTable td {
+.reportEvidenceTable td,
+.reportScenarioTable td,
+.reportMarkdownTable td {
   padding: 10px 9px;
   vertical-align: top;
   line-height: 1.45;

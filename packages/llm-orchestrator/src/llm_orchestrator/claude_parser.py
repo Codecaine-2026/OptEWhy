@@ -6,7 +6,13 @@ from typing import Protocol
 import anthropic
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from llm_orchestrator.models import AnalysisOptions, IntentType, StructuredQuery, Target
+from llm_orchestrator.models import (
+    AnalysisOptions,
+    IntentType,
+    ScenarioIntervention,
+    StructuredQuery,
+    Target,
+)
 from llm_orchestrator.parsers import (
     IntentParserRateLimitError,
     IntentParserUnavailableError,
@@ -41,6 +47,14 @@ class _ParsedAnalysisOptions(BaseModel):
     include_recommendations: bool
 
 
+class _ParsedIntervention(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    node_id: str
+    operation: str
+    value: float
+
+
 class IntentOutput(BaseModel):
     """Strict structured result returned by the configured LLM."""
 
@@ -50,6 +64,7 @@ class IntentOutput(BaseModel):
     target: _ParsedTarget | None
     time_window: _ParsedTimeWindow
     analysis_options: _ParsedAnalysisOptions
+    intervention: _ParsedIntervention | None = None
 
 
 class _TextBlock(Protocol):
@@ -127,6 +142,24 @@ class ClaudeIntentParser:
                 entity_id=parsed.target.entity_id,
             )
 
+        intervention: ScenarioIntervention | None = None
+        if parsed.intervention is not None:
+            node_id = parsed.intervention.node_id.strip()
+            if node_id not in self._node_catalog:
+                raise InvalidIntentTargetError(
+                    f"Intent parser selected unsupported intervention node: {node_id}"
+                )
+            if parsed.intervention.operation not in {"increase_relative", "decrease_relative"}:
+                raise IntentParserUnavailableError("Claude returned an invalid scenario operation")
+            try:
+                intervention = ScenarioIntervention(
+                    node_id=node_id,
+                    operation=parsed.intervention.operation,
+                    value=parsed.intervention.value,
+                )
+            except ValidationError as exc:
+                raise IntentParserUnavailableError("Claude returned an invalid scenario value") from exc
+
         time_window = {"mode": parsed.time_window.mode}
         if parsed.time_window.start is not None:
             time_window["start"] = parsed.time_window.start
@@ -138,6 +171,7 @@ class ClaudeIntentParser:
             target=target,
             time_window=time_window,
             analysis_options=AnalysisOptions(**parsed.analysis_options.model_dump()),
+            intervention=intervention,
             raw_message=message,
         )
 
@@ -165,10 +199,19 @@ Return this exact shape after the opening brace already supplied:
 "intent":"one supported intent","target":{{"node_id":"valid node id","entity_type":null,
 "entity_id":null}}|null,"time_window":{{"mode":"current_shift","start":null,"end":null}},
 "analysis_options":{{"include_paths":true,"include_loops":true,"include_evidence":true,
-"include_recommendations":false}}
+"include_recommendations":false}},"intervention":{{"node_id":"valid node id",
+"operation":"increase_relative|decrease_relative","value":0.15}}|null
 
 Use an exact causal node ID from the list; never invent one. Set target to null if no target can be
-inferred. For casual_conversation, set target to null and all analysis options to false."""
+inferred. For scenario_simulation, intervention is the factor being changed; target is the optional
+outcome the user asks about. For example, if the user asks what happens to truck turn time when yard
+density increases by 10%, target is truck_turn_time and intervention is yard_density with
+increase_relative and value 0.10. If the user asks only for the effect or impact of a changed
+factor, that factor is the intervention, not a target: set target to null. Set a target only when a
+distinct outcome is named (for example, "weather severity to QC productivity"). For non-simulation
+intents and casual_conversation, set intervention to null. If a simulation does not state a change
+direction or magnitude, use increase_relative and value 0.15. For casual_conversation, set target
+to null and all analysis options to false."""
 
 
 def _response_text(response: _MessageResponse) -> str:

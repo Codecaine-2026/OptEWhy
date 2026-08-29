@@ -1,5 +1,18 @@
+import pytest
+from api.dependencies import get_scenario_orchestrator
 from api.main import app
+from api.services.graph_repository import DemoGraphRepository
+from api.services.scenario_orchestrator import ScenarioOrchestrator
 from fastapi.testclient import TestClient
+
+
+@pytest.fixture(autouse=True)
+def use_test_graph_repository() -> None:
+    app.dependency_overrides[get_scenario_orchestrator] = lambda: ScenarioOrchestrator(
+        graph_repository=DemoGraphRepository()
+    )
+    yield
+    app.dependency_overrides.pop(get_scenario_orchestrator, None)
 
 
 def test_scenario_endpoint_uses_requested_intervention() -> None:

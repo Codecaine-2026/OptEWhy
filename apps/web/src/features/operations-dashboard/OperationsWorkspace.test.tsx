@@ -93,7 +93,7 @@ describe("OperationsWorkspace", () => {
       },
       scenario: {
         scenarioId: "scenario_test",
-        structuredIntervention: { interventions: [{ nodeId: "node_0" }] },
+        structuredIntervention: { targetNodeId: "node_2", interventions: [{ nodeId: "node_0" }] },
         predictedImpact: scenarioState,
         baselineState,
         scenarioState,
@@ -112,7 +112,7 @@ describe("OperationsWorkspace", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Send query" }));
 
-    const pathGraph = await screen.findByLabelText("3-node causal system map");
+    const [pathGraph] = await screen.findAllByLabelText("3-node causal system map");
     expect(pathGraph).toBeTruthy();
     expect(screen.getByText("Path to Node 2")).toBeTruthy();
     expect(Array.from(pathGraph.querySelectorAll(".svgLabel")).map((label) => label.textContent)).toEqual([
@@ -120,6 +120,12 @@ describe("OperationsWorkspace", () => {
       "Node 1",
       "Node 2",
     ]);
+    expect(Array.from(pathGraph.querySelectorAll("line"))).toHaveLength(2);
+    expect(
+      Array.from(pathGraph.querySelectorAll("line")).every(
+        (edge) => edge.getAttribute("data-highlighted") === "true"
+      )
+    ).toBe(true);
     expect(pathGraph.querySelector("text")?.textContent).not.toBe("Node 3");
   });
 });

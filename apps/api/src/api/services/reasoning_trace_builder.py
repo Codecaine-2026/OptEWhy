@@ -98,8 +98,9 @@ def _path_reasoning_summary(
 def _loop_reasoning_summary(loop: FeedbackLoop, node_by_id: dict[str, FcmNode]) -> str:
     labels = [node_by_id[node_id].label for node_id in loop.nodes if node_id in node_by_id]
     loop_name = " → ".join(labels)
+    loop_label = loop.loop_type.title() + " feedback loop" if loop.loop_type in {"reinforcing", "balancing"} else "Feedback loop"
     return (
-        f"{loop.loop_type.title()} feedback links {loop_name}. "
+        f"{loop_label} links {loop_name}. "
         f"Its strength is {loop.strength:.2f} with {loop.confidence:.0%} confidence, "
         "so it can amplify or dampen the path over time."
     )

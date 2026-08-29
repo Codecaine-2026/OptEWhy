@@ -49,3 +49,21 @@ def test_claude_chat_responder_generates_grounded_analysis() -> None:
 
     assert answer == "Hi! How can I help with your port operations?"
     assert "causal-analysis results" in str(messages.last_kwargs["system"])
+    assert "## Causal explanation" in str(messages.last_kwargs["system"])
+
+
+def test_claude_chat_responder_requests_readable_scenario_markdown() -> None:
+    messages = FakeMessagesAPI()
+    responder = ClaudeChatResponder(model="test-model", client=FakeClaudeClient(messages))
+
+    responder.respond_to_analysis(
+        message="What if yard density improves by 15%?",
+        causal_result={"targetNodeId": "qc_productivity"},
+        evidence=[],
+        scenario={"scenarioId": "scenario_demo_001"},
+    )
+
+    system_prompt = str(messages.last_kwargs["system"])
+    assert "## Scenario summary" in system_prompt
+    assert "## Causal explanation" in system_prompt
+    assert "GitHub-Flavored Markdown table" in system_prompt

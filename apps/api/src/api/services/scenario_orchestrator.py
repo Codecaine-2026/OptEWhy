@@ -21,22 +21,26 @@ class ScenarioOrchestrator:
         )
         if intervention.node_id not in snapshot.node_values:
             raise ValueError(f"Unsupported intervention node: {intervention.node_id}")
+        if request.target_node_id is not None and request.target_node_id not in snapshot.node_values:
+            raise ValueError(f"Unsupported target node: {request.target_node_id}")
 
         interventions = [intervention]
-        result = simulate_scenario(graph, snapshot, interventions, steps=4)
+        baseline_result = simulate_scenario(graph, snapshot, [], steps=4)
+        scenario_result = simulate_scenario(graph, snapshot, interventions, steps=4)
 
         return ScenarioResponse(
             scenario_id="scenario_demo_001",
             structured_intervention={
                 "sourceMessage": request.message,
+                "targetNodeId": request.target_node_id,
                 "interventions": [intervention.model_dump() for intervention in interventions],
             },
             predicted_impact={
-                node_id: result.final_state.get(node_id, 0.0) - baseline_value
-                for node_id, baseline_value in result.baseline.items()
+                node_id: scenario_result.final_state.get(node_id, 0.0) - baseline_value
+                for node_id, baseline_value in baseline_result.final_state.items()
             },
-            baseline_state=result.baseline,
-            scenario_state=result.final_state,
+            baseline_state=baseline_result.final_state,
+            scenario_state=scenario_result.final_state,
             side_effects=[],
-            propagation_frames=result.propagation_frames,
+            propagation_frames=scenario_result.propagation_frames,
         )

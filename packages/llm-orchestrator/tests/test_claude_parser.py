@@ -90,6 +90,29 @@ def test_claude_parser_builds_validated_structured_query() -> None:
     assert "yard_density" in str(messages.last_kwargs["system"])
 
 
+def test_claude_parser_separates_scenario_intervention_from_requested_target() -> None:
+    output = IntentOutput.model_validate(
+        {
+            **build_output(intent=IntentType.SCENARIO_SIMULATION, node_id="qc_productivity").model_dump(),
+            "intervention": {
+                "node_id": "yard_density",
+                "operation": "increase_relative",
+                "value": 0.1,
+            },
+        }
+    )
+    parser = build_parser(FakeMessagesAPI(output))
+
+    query = parser.parse("What happens to QC productivity if yard density increases by 10%?")
+
+    assert query.target is not None
+    assert query.target.node_id == "qc_productivity"
+    assert query.intervention is not None
+    assert query.intervention.node_id == "yard_density"
+    assert query.intervention.operation == "increase_relative"
+    assert query.intervention.value == 0.1
+
+
 def test_claude_parser_rejects_unknown_causal_node() -> None:
     parser = build_parser(FakeMessagesAPI(build_output(node_id="invented_node")))
 

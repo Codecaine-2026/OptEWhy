@@ -3,6 +3,7 @@
 import { Download } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { CausalMapCanvas } from "@/features/causal-map/CausalMapCanvas";
 import { AnalysisDetails } from "@/features/copilot/AnalysisDetails";
 import { CopilotPanel } from "@/features/copilot/CopilotPanel";
@@ -10,6 +11,7 @@ import { EvidenceDrawer } from "@/features/evidence/EvidenceDrawer";
 import { ScenarioImpactTable } from "@/features/scenario-simulator/ScenarioImpactTable";
 import { getCurrentGraph } from "@/lib/api";
 import { downloadElementAsPdf } from "@/lib/exportPdf";
+import { feedbackLoopLabel } from "@/lib/loopLabel";
 import type {
   CausalEdge,
   CausalNode,
@@ -24,7 +26,11 @@ const graphColumns = 4;
 const graphColumnWidth = 190;
 const graphRowHeight = 82;
 
-function layoutGraph(graph: GraphResponse, visibleNodeIds?: Set<string>) {
+function layoutGraph(
+  graph: GraphResponse,
+  visibleNodeIds?: Set<string>,
+  visibleEdgeIds?: Set<string>
+) {
   const visibleNodes = visibleNodeIds
     ? graph.nodes.filter((node) => visibleNodeIds.has(node.id))
     : graph.nodes;
@@ -39,8 +45,9 @@ function layoutGraph(graph: GraphResponse, visibleNodeIds?: Set<string>) {
   const edges: CausalEdge[] = graph.edges
     .filter(
       (edge) =>
-        !visibleNodeIds ||
-        (visibleNodeIds.has(edge.sourceNodeId) && visibleNodeIds.has(edge.targetNodeId))
+        (!visibleNodeIds ||
+          (visibleNodeIds.has(edge.sourceNodeId) && visibleNodeIds.has(edge.targetNodeId))) &&
+        (!visibleEdgeIds || visibleEdgeIds.has(edge.id))
     )
     .map((edge) => ({
       id: edge.id,
@@ -67,6 +74,11 @@ function getScenarioInterventionNodeIds(scenario: ScenarioResponse) {
       return typeof nodeId === "string" ? [nodeId] : [];
     })
   );
+}
+
+function getScenarioTargetNodeId(scenario: ScenarioResponse) {
+  const targetNodeId = scenario.structuredIntervention.targetNodeId;
+  return typeof targetNodeId === "string" ? targetNodeId : null;
 }
 
 function getScenarioPathNodeIds(
@@ -127,16 +139,64 @@ function getScenarioPathNodeIds(
   return pathNodeIds.size ? pathNodeIds : ancestors;
 }
 
+function getScenarioCausalPath(
+  graph: GraphResponse,
+  interventionNodeIds: Set<string>,
+  targetNodeId: string
+) {
+  const outgoingEdges = new Map<string, GraphResponse["edges"]>();
+  for (const edge of graph.edges) {
+    outgoingEdges.set(edge.sourceNodeId, [...(outgoingEdges.get(edge.sourceNodeId) ?? []), edge]);
+  }
+
+  const nodeIds = new Set<string>();
+  const edgeIds = new Set<string>();
+  const maxPaths = 50;
+  let foundPathCount = 0;
+
+  function visit(currentNodeId: string, pathNodeIds: string[], pathEdgeIds: string[], visited: Set<string>) {
+    if (foundPathCount >= maxPaths) {
+      return;
+    }
+    if (currentNodeId === targetNodeId) {
+      foundPathCount += 1;
+      pathNodeIds.forEach((nodeId) => nodeIds.add(nodeId));
+      pathEdgeIds.forEach((edgeId) => edgeIds.add(edgeId));
+      return;
+    }
+
+    for (const edge of outgoingEdges.get(currentNodeId) ?? []) {
+      if (visited.has(edge.targetNodeId)) {
+        continue;
+      }
+      const nextVisited = new Set(visited);
+      nextVisited.add(edge.targetNodeId);
+      visit(
+        edge.targetNodeId,
+        [...pathNodeIds, edge.targetNodeId],
+        [...pathEdgeIds, edge.id],
+        nextVisited
+      );
+    }
+  }
+
+  for (const interventionNodeId of interventionNodeIds) {
+    visit(interventionNodeId, [interventionNodeId], [], new Set([interventionNodeId]));
+  }
+
+  return { nodeIds, edgeIds };
+}
+
 export function OperationsWorkspace() {
   const [graph, setGraph] = useState<GraphResponse | null>(null);
   const [graphError, setGraphError] = useState("");
   const [visualization, setVisualization] = useState<VisualizationPayload | null>(null);
   const [scenario, setScenario] = useState<ScenarioResponse | null>(null);
-  const [scenarioExplanation, setScenarioExplanation] = useState("");
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceItem | null>(null);
   const [loopIndex, setLoopIndex] = useState(0);
   const [analysis, setAnalysis] = useState<QueryResponse | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
   const exportReportRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let isActive = true;
@@ -160,8 +220,10 @@ export function OperationsWorkspace() {
   const scenarioInterventionNodeIds = scenario
     ? getScenarioInterventionNodeIds(scenario)
     : new Set<string>();
+  const requestedScenarioTargetNodeId = scenario ? getScenarioTargetNodeId(scenario) : null;
   const scenarioTargetNode = scenario
-    ? graphView.nodes
+    ? graphView.nodes.find((node) => node.id === requestedScenarioTargetNodeId) ??
+      graphView.nodes
         .filter((node) => !scenarioInterventionNodeIds.has(node.id))
         .map((node) => {
           const baseline = scenario.baselineState[node.id] ?? 0;
@@ -170,12 +232,41 @@ export function OperationsWorkspace() {
         })
         .sort((left, right) => right.absoluteDelta - left.absoluteDelta)[0]?.node ?? null
     : null;
-  const scenarioPathNodeIds = scenario && graph && scenarioTargetNode
-    ? getScenarioPathNodeIds(graph, scenarioInterventionNodeIds, scenarioTargetNode.id)
+  const exactScenarioPath = scenario && graph && scenarioTargetNode && scenarioInterventionNodeIds.size
+    ? getScenarioCausalPath(graph, scenarioInterventionNodeIds, scenarioTargetNode.id)
     : null;
+  const hasExactScenarioPath = Boolean(exactScenarioPath?.nodeIds.size);
+  const hasRequestedScenarioTarget = Boolean(requestedScenarioTargetNodeId && scenarioTargetNode);
+  const noModeledScenarioPath = Boolean(
+    scenario &&
+      hasRequestedScenarioTarget &&
+      scenarioInterventionNodeIds.size &&
+      !hasExactScenarioPath
+  );
+  const scenarioPathNodeIds = exactScenarioPath?.nodeIds.size
+    ? exactScenarioPath.nodeIds
+    : scenario && graph && scenarioTargetNode
+      ? getScenarioPathNodeIds(graph, scenarioInterventionNodeIds, scenarioTargetNode.id)
+      : null;
+  const scenarioFeedbackLoops = exactScenarioPath?.nodeIds.size
+    ? visualization?.loops.filter((loop) =>
+        loop.nodeIds.some((nodeId) => exactScenarioPath.nodeIds.has(nodeId))
+      ) ?? []
+    : [];
+  const activeScenarioLoop = scenarioFeedbackLoops[loopIndex] ?? null;
+  const displayedScenarioNodeIds = noModeledScenarioPath && scenarioTargetNode
+    ? new Set([...scenarioInterventionNodeIds, scenarioTargetNode.id])
+    : exactScenarioPath?.nodeIds.size
+    ? new Set([...exactScenarioPath.nodeIds, ...(activeScenarioLoop?.nodeIds ?? [])])
+    : scenarioPathNodeIds;
+  const scenarioPathEdgeIds = exactScenarioPath?.edgeIds.size
+    ? new Set([...exactScenarioPath.edgeIds, ...(activeScenarioLoop?.edgeIds ?? [])])
+    : noModeledScenarioPath
+      ? new Set<string>()
+      : undefined;
   const displayedGraphView = graph
     ? scenario
-      ? layoutGraph(graph, scenarioPathNodeIds ?? new Set<string>())
+      ? layoutGraph(graph, displayedScenarioNodeIds ?? new Set<string>(), scenarioPathEdgeIds)
       : graphView
     : { nodes: [], edges: [] };
   const activeLoop = visualization?.loops[loopIndex] ?? null;
@@ -185,10 +276,18 @@ export function OperationsWorkspace() {
   const strongestPathEdgeIds = visualization?.reasoningEdges
     .filter((edge) => edge.reasoningStepIds.includes("path_1"))
     .map((edge) => edge.id) ?? [];
-  const activeNodeIds = activeLoop
+  const activeNodeIds = noModeledScenarioPath
+    ? [...(displayedScenarioNodeIds ?? [])]
+    : exactScenarioPath?.nodeIds.size
+    ? [...new Set([...exactScenarioPath.nodeIds, ...(activeScenarioLoop?.nodeIds ?? [])])]
+    : activeLoop
     ? [...new Set([...strongestPathNodeIds, ...activeLoop.nodeIds])]
     : visualization?.highlightedNodes;
-  const activeEdgeIds = activeLoop
+  const activeEdgeIds = noModeledScenarioPath
+    ? []
+    : exactScenarioPath?.edgeIds.size
+    ? [...new Set([...exactScenarioPath.edgeIds, ...(activeScenarioLoop?.edgeIds ?? [])])]
+    : activeLoop
     ? [...new Set([...strongestPathEdgeIds, ...activeLoop.edgeIds])]
     : visualization?.highlightedEdges;
   const scenarioRows = scenario
@@ -209,14 +308,30 @@ export function OperationsWorkspace() {
     timeStyle: "short"
   }).format(new Date());
   const dominantPath = analysis?.causalResult.dominantPaths[0];
+  const isScenarioReport = analysis?.intent === "scenario_simulation" && scenario !== null;
+  const reportTitle = isScenarioReport ? "Scenario Simulation Report" : "Reasoning Analysis Report";
+  const reportKicker = isScenarioReport ? "Operational scenario assessment" : "Operational intelligence brief";
+  const reportSubtitle = isScenarioReport
+    ? "Projected impact of the proposed operational intervention"
+    : "Causal analysis for port operations";
+  const exportFileName = isScenarioReport
+    ? "optewhy-scenario-simulation-report.pdf"
+    : "optewhy-reasoning-analysis-report.pdf";
+  const targetScenarioImpact =
+    isScenarioReport && analysis && scenario
+      ? scenario.predictedImpact[analysis.causalResult.targetNodeId]
+      : null;
 
   async function handleExport() {
     if (!exportReportRef.current || !analysis) {
       return;
     }
     setIsExporting(true);
+    setExportError("");
     try {
-      await downloadElementAsPdf(exportReportRef.current, "optewhy-reasoning-report.pdf");
+      await downloadElementAsPdf(exportReportRef.current, exportFileName);
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : "The PDF could not be generated.");
     } finally {
       setIsExporting(false);
     }
@@ -238,6 +353,7 @@ export function OperationsWorkspace() {
             {isExporting ? "Preparing PDF..." : "Export PDF"}
           </button>
         ) : null}
+        {exportError ? <span className="exportError" role="alert">PDF export failed: {exportError}</span> : null}
       </header>
 
       <section className="mainGrid">
@@ -247,7 +363,6 @@ export function OperationsWorkspace() {
               setAnalysis(null);
               setVisualization(null);
               setScenario(null);
-              setScenarioExplanation("");
               setSelectedEvidence(null);
             }}
             onResponse={(response) => {
@@ -255,7 +370,6 @@ export function OperationsWorkspace() {
               setVisualization(response.visualization);
               setLoopIndex(0);
               setScenario(response.scenario ?? null);
-              setScenarioExplanation(response.scenario ? response.answer : "");
             }}
             onSelectEvidence={setSelectedEvidence}
           />
@@ -265,11 +379,39 @@ export function OperationsWorkspace() {
           <div className="mapHeader">
             <h2>Causal Graph</h2>
             {scenario ? (
-              <span>
-                {scenarioTargetNode
-                  ? `Path to ${scenarioTargetNode.label}`
-                  : "No eligible affected node"}
-              </span>
+              noModeledScenarioPath ? (
+                <span>
+                  No modeled causal path from {graphView.nodes.find((node) => scenarioInterventionNodeIds.has(node.id))?.label ?? "intervention"} to {scenarioTargetNode?.label ?? "target"}
+                </span>
+              ) : scenarioFeedbackLoops.length ? (
+                <div className="loopPager" aria-label="Scenario feedback loop pages">
+                  <button
+                    type="button"
+                    onClick={() => setLoopIndex((current) => Math.max(0, current - 1))}
+                    disabled={loopIndex === 0}
+                  >
+                    Previous
+                  </button>
+                  <span>
+                    Path to {scenarioTargetNode?.label ?? "target"} + {feedbackLoopLabel(activeScenarioLoop?.loopType).toLowerCase()} {loopIndex + 1} / {scenarioFeedbackLoops.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setLoopIndex((current) => Math.min(scenarioFeedbackLoops.length - 1, current + 1))
+                    }
+                    disabled={loopIndex === scenarioFeedbackLoops.length - 1}
+                  >
+                    Next
+                  </button>
+                </div>
+              ) : (
+                <span>
+                  {scenarioTargetNode
+                    ? `Path to ${scenarioTargetNode.label}`
+                    : "No eligible affected node"}
+                </span>
+              )
             ) : visualization?.loops.length ? (
               <div className="loopPager" aria-label="Feedback loop pages">
                 <button
@@ -279,7 +421,7 @@ export function OperationsWorkspace() {
                 >
                   Previous
                 </button>
-                <span>Causal path + feedback loop {loopIndex + 1} / {visualization.loops.length}</span>
+                <span>Causal path + {feedbackLoopLabel(activeLoop?.loopType).toLowerCase()} {loopIndex + 1} / {visualization.loops.length}</span>
                 <button
                   type="button"
                   onClick={() =>
@@ -319,7 +461,12 @@ export function OperationsWorkspace() {
 
       {scenario ? (
         <section className="bottomPanel">
-          <ScenarioImpactTable rows={scenarioRows} scenarioExplanation={scenarioExplanation} />
+          <ScenarioImpactTable
+            rows={scenarioRows}
+            scenario={scenario}
+            reasoningTrace={analysis?.reasoningTrace ?? { targetNodeId: "", steps: [] }}
+            reasoningNodes={visualization?.reasoningNodes ?? []}
+          />
         </section>
       ) : null}
       <EvidenceDrawer
@@ -333,9 +480,9 @@ export function OperationsWorkspace() {
             <div className="reportIdentity">
               <img className="reportLogo" src="/assets/PSA_logo.jpeg" alt="PSA logo" />
               <div>
-                <p className="reportKicker">Operational intelligence brief</p>
-                <h1>Reasoning Report</h1>
-                <p className="reportSubtitle">Causal analysis for port operations</p>
+                <p className="reportKicker">{reportKicker}</p>
+                <h1>{reportTitle}</h1>
+                <p className="reportSubtitle">{reportSubtitle}</p>
               </div>
             </div>
             <dl className="reportMetadata">
@@ -355,24 +502,39 @@ export function OperationsWorkspace() {
           </header>
           <section className="reportMetricGrid" aria-label="Analysis summary" data-pdf-block>
             <div className="reportMetric">
-              <span>Target KPI</span>
-              <strong>{analysis.causalResult.targetNodeId.replaceAll("_", " ")}</strong>
+              <span>{isScenarioReport ? "Scenario ID" : "Target KPI"}</span>
+              <strong>
+                {isScenarioReport ? scenario?.scenarioId.replaceAll("_", " ") : analysis.causalResult.targetNodeId.replaceAll("_", " ")}
+              </strong>
             </div>
             <div className="reportMetric">
-              <span>Primary path contribution</span>
-              <strong>{dominantPath ? `${Math.round(dominantPath.contributionRatio * 100)}%` : "N/A"}</strong>
+              <span>{isScenarioReport ? "Target KPI" : "Primary path contribution"}</span>
+              <strong>
+                {isScenarioReport
+                  ? analysis.causalResult.targetNodeId.replaceAll("_", " ")
+                  : dominantPath
+                    ? `${Math.round(dominantPath.contributionRatio * 100)}%`
+                    : "N/A"}
+              </strong>
             </div>
             <div className="reportMetric">
-              <span>Supporting evidence</span>
-              <strong>{analysis.evidence.length} sources</strong>
+              <span>{isScenarioReport ? "Predicted target change" : "Supporting evidence"}</span>
+              <strong>
+                {isScenarioReport
+                  ? targetScenarioImpact === null || targetScenarioImpact === undefined
+                    ? "N/A"
+                    : `${targetScenarioImpact >= 0 ? "+" : ""}${(targetScenarioImpact * 100).toFixed(1)}%`
+                  : `${analysis.evidence.length} sources`}
+              </strong>
             </div>
           </section>
           <section className="reportSection">
             <div className="reportSectionHeader" data-pdf-block>
-              <p className="reportSectionLabel">Executive interpretation</p>
-              <h2>AI analysis</h2>
+              <p className="reportSectionLabel">{isScenarioReport ? "Projected outcome" : "Executive interpretation"}</p>
+              <h2>{isScenarioReport ? "AI simulation interpretation" : "AI reasoning analysis"}</h2>
             </div>
             <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
               components={{
                 h1: ({ children }) => <h1 data-pdf-block>{children}</h1>,
                 h2: ({ children }) => <h2 data-pdf-block>{children}</h2>,
@@ -380,29 +542,61 @@ export function OperationsWorkspace() {
                 p: ({ children }) => <p data-pdf-block>{children}</p>,
                 ul: ({ children }) => <ul data-pdf-block>{children}</ul>,
                 ol: ({ children }) => <ol data-pdf-block>{children}</ol>,
-                pre: ({ children }) => <pre data-pdf-block>{children}</pre>
+                pre: ({ children }) => <pre data-pdf-block>{children}</pre>,
+                table: ({ children }) => (
+                  <table className="reportMarkdownTable" data-pdf-block>
+                    {children}
+                  </table>
+                )
               }}
             >
               {analysis.answer}
             </ReactMarkdown>
           </section>
-          <section className="reportSection" data-pdf-block>
-            <p className="reportSectionLabel">Traceable model output</p>
-            <h2>Reasoning trace</h2>
-            <ol className="reportTraceList">
-              {analysis.reasoningTrace.steps.map((step) => (
-                <li key={step.id}>
-                  <div>
-                    <strong>{step.stepType === "dominant_path" ? "Dominant causal path" : "Feedback loop"}</strong>
-                    <span>{step.summary}</span>
-                  </div>
-                  {step.confidence !== null && step.confidence !== undefined ? (
-                    <small>Confidence {Math.round(step.confidence * 100)}%</small>
-                  ) : null}
-                </li>
-              ))}
-            </ol>
-          </section>
+          {isScenarioReport ? (
+            <section className="reportSection" data-pdf-block>
+              <p className="reportSectionLabel">Simulation output</p>
+              <h2>Projected KPI impact</h2>
+              <table className="reportScenarioTable">
+                <thead>
+                  <tr>
+                    <th>KPI</th>
+                    <th>Baseline</th>
+                    <th>Scenario</th>
+                    <th>Delta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scenarioRows.map((row) => (
+                    <tr key={row.kpi} className={Number(row.delta) < 0 ? "impactRow--decreased" : "impactRow--increased"}>
+                      <td>{row.kpi}</td>
+                      <td>{row.baseline}</td>
+                      <td>{row.scenario}</td>
+                      <td>{row.delta}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          ) : (
+            <section className="reportSection" data-pdf-block>
+              <p className="reportSectionLabel">Traceable model output</p>
+              <h2>Reasoning trace</h2>
+              <ol className="reportTraceList">
+                {analysis.reasoningTrace.steps.map((step) => (
+                  <li key={step.id}>
+                    <div>
+                      <strong>{step.stepType === "dominant_path" ? "Dominant causal path" : feedbackLoopLabel(step.loopType)}</strong>
+                      <span>{step.summary}</span>
+                    </div>
+                    {step.confidence !== null && step.confidence !== undefined ? (
+                      <small>Confidence {Math.round(step.confidence * 100)}%</small>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
           <section className="reportSection reportGraphSection" data-pdf-block>
             <p className="reportSectionLabel">Model view</p>
             <h2>Causal graph</h2>
@@ -452,7 +646,7 @@ export function OperationsWorkspace() {
           ) : null}
           <footer className="reportFooter" data-pdf-block>
             <span>OptEWhy • Causal reasoning and scenario simulation</span>
-            <span>Generated from the current analysis response</span>
+            <span>Generated from the current {isScenarioReport ? "simulation" : "analysis"} response</span>
           </footer>
         </div>
       ) : null}

@@ -1,5 +1,15 @@
+import pytest
+from api.dependencies import get_graph_repository
 from api.main import app
+from api.services.graph_repository import DemoGraphRepository
 from fastapi.testclient import TestClient
+
+
+@pytest.fixture(autouse=True)
+def use_test_graph_repository() -> None:
+    app.dependency_overrides[get_graph_repository] = DemoGraphRepository
+    yield
+    app.dependency_overrides.pop(get_graph_repository, None)
 
 
 def test_current_graph_returns_expanded_reference_graph() -> None:

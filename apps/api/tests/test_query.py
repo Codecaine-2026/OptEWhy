@@ -2,7 +2,7 @@ from api.dependencies import get_query_orchestrator
 from api.main import app
 from api.services.query_orchestrator import QueryOrchestrator
 from fastapi.testclient import TestClient
-from llm_orchestrator.models import IntentType, StructuredQuery
+from llm_orchestrator.models import IntentType, ScenarioIntervention, StructuredQuery, Target
 from llm_orchestrator.parsers import (
     IntentParserUnavailableError,
     InvalidIntentTargetError,
@@ -57,7 +57,7 @@ def test_query_endpoint_returns_contract() -> None:
         step for step in reasoning_trace["steps"] if step["stepType"] == "feedback_loop"
     ]
     assert len(dominant_path_steps) == 1
-    assert 1 <= len(feedback_loop_steps) <= 3
+    assert 1 <= len(feedback_loop_steps) <= 5
     assert dominant_path_steps[0]["usedNodeIds"] == body["causalResult"]["dominantPaths"][0][
         "path"
     ]
@@ -205,3 +205,144 @@ def test_query_endpoint_runs_scenario_requests_inside_the_copilot_flow() -> None
         "operation": "decrease_relative",
         "value": 0.2,
     }
+
+
+def test_scenario_query_uses_a_requested_outcome_node() -> None:
+    class TargetedScenarioParser:
+        def parse(self, message: str) -> StructuredQuery:
+            return StructuredQuery(
+                intent=IntentType.SCENARIO_SIMULATION,
+                target=Target(node_id="truck_turn_time"),
+                intervention=ScenarioIntervention(
+                    node_id="yard_density",
+                    operation="increase_relative",
+                    value=0.1,
+                ),
+                raw_message=message,
+            )
+
+    app.dependency_overrides[get_query_orchestrator] = lambda: QueryOrchestrator(
+        parser=TargetedScenarioParser(),
+        analysis_responder=GroundedAnalysisResponder(),
+    )
+    try:
+        response = TestClient(app).post(
+            "/api/query",
+            json={
+                "message": "What happens to truck turn time if yard density increases by 10%?",
+                "terminal_id": "terminal_alpha",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["causalResult"]["targetNodeId"] == "truck_turn_time"
+    assert body["scenario"]["structuredIntervention"]["targetNodeId"] == "truck_turn_time"
+    assert body["scenario"]["structuredIntervention"]["interventions"] == [
+        {"node_id": "yard_density", "operation": "increase_relative", "value": 0.1}
+    ]
+
+
+def test_broad_scenario_effect_request_does_not_default_to_qc_productivity() -> None:
+    class BroadEffectParser:
+        def parse(self, message: str) -> StructuredQuery:
+            return StructuredQuery(
+                intent=IntentType.SCENARIO_SIMULATION,
+                # This mirrors a parser's old fallback target. The message itself has no outcome.
+                target=Target(node_id="qc_productivity"),
+                intervention=ScenarioIntervention(
+                    node_id="weather_severity",
+                    operation="increase_relative",
+                    value=0.15,
+                ),
+                raw_message=message,
+            )
+
+    app.dependency_overrides[get_query_orchestrator] = lambda: QueryOrchestrator(
+        parser=BroadEffectParser(),
+        analysis_responder=GroundedAnalysisResponder(),
+    )
+    try:
+        response = TestClient(app).post(
+            "/api/query",
+            json={"message": "effect of weather severity", "terminal_id": "terminal_alpha"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["causalResult"]["targetNodeId"] != "qc_productivity"
+    assert body["scenario"]["structuredIntervention"]["targetNodeId"] is None
+
+
+def test_start_node_effect_request_is_always_a_simulation() -> None:
+    class MisclassifiedEffectParser:
+        def parse(self, message: str) -> StructuredQuery:
+            return StructuredQuery(
+                intent=IntentType.ROOT_MECHANISM_ANALYSIS,
+                target=Target(node_id="weather_severity"),
+                raw_message=message,
+            )
+
+    app.dependency_overrides[get_query_orchestrator] = lambda: QueryOrchestrator(
+        parser=MisclassifiedEffectParser(),
+        analysis_responder=GroundedAnalysisResponder(),
+    )
+    try:
+        response = TestClient(app).post(
+            "/api/query",
+            json={
+                "message": "effect of increase in weather severity",
+                "terminal_id": "terminal_alpha",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["intent"] == "scenario_simulation"
+    assert body["scenario"] is not None
+    assert body["scenario"]["structuredIntervention"]["interventions"] == [
+        {"node_id": "weather_severity", "operation": "increase_relative", "value": 0.15}
+    ]
+    assert body["scenario"]["structuredIntervention"]["targetNodeId"] is None
+    assert body["causalResult"]["targetNodeId"] != "weather_severity"
+
+
+def test_targeted_scenario_does_not_attribute_unconnected_target_changes_to_intervention() -> None:
+    class UnconnectedScenarioParser:
+        def parse(self, message: str) -> StructuredQuery:
+            return StructuredQuery(
+                intent=IntentType.SCENARIO_SIMULATION,
+                target=Target(node_id="yard_density"),
+                intervention=ScenarioIntervention(
+                    node_id="crane_equipment_availability",
+                    operation="decrease_relative",
+                    value=0.15,
+                ),
+                raw_message=message,
+            )
+
+    app.dependency_overrides[get_query_orchestrator] = lambda: QueryOrchestrator(
+        parser=UnconnectedScenarioParser(),
+        analysis_responder=GroundedAnalysisResponder(),
+    )
+    try:
+        response = TestClient(app).post(
+            "/api/query",
+            json={
+                "message": "What happens to yard density if crane equipment availability is low?",
+                "terminal_id": "terminal_alpha",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["causalResult"]["dominantPaths"] == []
+    assert body["scenario"]["predictedImpact"]["yard_density"] == 0

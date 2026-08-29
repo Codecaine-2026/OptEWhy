@@ -77,11 +77,7 @@ class ClaudeChatResponder(ChatResponder):
             response = self._client.messages.create(
                 model=self._model,
                 max_tokens=500,
-                system=(
-                    "You explain causal-analysis results for a port operations copilot. Use only "
-                    "the supplied JSON data. Clearly distinguish modeled causal paths from "
-                    "evidence. Do not invent metrics, causes, or operational facts."
-                ),
+                system=self._analysis_system_prompt(is_scenario=scenario is not None),
                 messages=[{"role": "user", "content": payload}],
             )
         except Exception as exc:
@@ -99,3 +95,33 @@ class ClaudeChatResponder(ChatResponder):
 intelligence app. Respond naturally and concisely to greetings and general conversation. Be helpful
 and professional. Do not invent port metrics, causal findings, or analysis results in this
 conversational mode."""
+
+    @staticmethod
+    def _analysis_system_prompt(*, is_scenario: bool) -> str:
+        base_prompt = (
+            "You explain causal-analysis results for a port operations copilot. Use only "
+            "the supplied JSON data. Clearly distinguish modeled causal paths from "
+            "evidence. Do not invent metrics, causes, or operational facts. Return Markdown. "
+            "After a concise opening answer, make the second section ## Causal explanation. "
+            "In that section, explain the modeled cause-and-effect flow in plain language, "
+            "such as one factor increasing or decreasing the next factor and leading to the "
+            "observed result. Do not reveal private reasoning or hidden chain-of-thought."
+        )
+        if not is_scenario:
+            return base_prompt
+        return (
+            f"{base_prompt} This is a scenario simulation. Use concise sections named "
+            "## Scenario summary, ## Causal explanation, ## Projected effects, and "
+            "## Operational considerations. "
+            "When scenario.structuredIntervention.targetNodeId is present, lead with the "
+            "projected outcome for that requested target before describing other KPI effects. "
+            "For a targeted scenario, causal_result.dominantPaths contains only modeled paths "
+            "from the intervention to the requested target. If it is empty, clearly state that "
+            "the model has no directed causal path and do not explain general target drivers as "
+            "effects of the intervention. "
+            "If the scenario input did not specify a change direction or magnitude, state the "
+            "modeled 15% increase assumption explicitly. "
+            "Present projected KPI effects in a valid GitHub-Flavored Markdown table, with a "
+            "header row and one row per KPI. Keep every table row on its own line. Use bullets "
+            "only for operational considerations, not for KPI comparisons or feedback loops."
+        )

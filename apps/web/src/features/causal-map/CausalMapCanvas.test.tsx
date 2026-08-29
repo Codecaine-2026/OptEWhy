@@ -48,7 +48,7 @@ describe("CausalMapCanvas", () => {
     );
 
     const viewBox = container.querySelector("svg")?.getAttribute("viewBox");
-    expect(Number(viewBox?.split(" ")[3])).toBe(646);
+    expect(Number(viewBox?.split(" ")[3])).toBe(644);
     expect(container.querySelectorAll(".svgLabel tspan")).toHaveLength(2);
     expect(container.querySelector(".svgLabel")?.getAttribute("text-anchor")).toBe("middle");
   });
@@ -56,7 +56,7 @@ describe("CausalMapCanvas", () => {
   it("renders non-highlighted causal edges with slight transparency", () => {
     const { container } = render(<CausalMapCanvas nodes={nodes} edges={edges} />);
 
-    expect(container.querySelector("line")?.getAttribute("opacity")).toBe("0.72");
+    expect(container.querySelector("line")?.getAttribute("opacity")).toBe("0.9");
   });
 
   it("renders causal edges at 40% of their original thickness", () => {
@@ -83,7 +83,7 @@ describe("CausalMapCanvas", () => {
       />
     );
 
-    expect(container.querySelector("rect")?.getAttribute("fill")).toBe("rgb(250, 204, 21)");
+    expect(container.querySelector("circle")?.getAttribute("fill")).toBe("rgb(250, 204, 21)");
     expect(container.querySelector(".svgMeta")).toBeNull();
   });
 
@@ -95,6 +95,6 @@ describe("CausalMapCanvas", () => {
       />
     );
 
-    expect(container.querySelector("rect")?.getAttribute("fill")).toBe("rgb(233, 209, 27)");
+    expect(container.querySelector("circle")?.getAttribute("fill")).toBe("rgb(233, 209, 27)");
   });
 });

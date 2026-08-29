@@ -39,6 +39,7 @@ class ScenarioRequest(ApiModel):
     message: str
     time_window: TimeWindow = Field(default_factory=TimeWindow)
     intervention: "ScenarioInterventionRequest | None" = None
+    target_node_id: str | None = None
 
 
 class ScenarioInterventionRequest(ApiModel):

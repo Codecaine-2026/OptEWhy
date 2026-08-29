@@ -3,6 +3,7 @@
 import { FileText, Send } from "lucide-react";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { submitCopilotQuery } from "@/lib/api";
 import type { EvidenceItem, QueryResponse } from "@/lib/types";
 import { AnalysisDetails } from "./AnalysisDetails";
@@ -56,7 +57,7 @@ export function CopilotPanel({ onResponse, onClearResponse, onSelectEvidence }: 
         <span>Causal analysis</span>
       </div>
       <div className="answerBox" aria-live="polite">
-        <ReactMarkdown>{answer}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{answer}</ReactMarkdown>
         {analysis?.evidence.length ? (
           <div className="citationPills" aria-label="Grounded evidence">
             {analysis.evidence.map((item) => (

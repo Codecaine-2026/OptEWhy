@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -26,9 +27,16 @@ class AnalysisOptions(BaseModel):
     include_recommendations: bool = False
 
 
+class ScenarioIntervention(BaseModel):
+    node_id: str
+    operation: Literal["increase_relative", "decrease_relative"]
+    value: float = Field(gt=0, le=1)
+
+
 class StructuredQuery(BaseModel):
     intent: IntentType
     target: Target | None = None
     time_window: dict[str, str] = Field(default_factory=lambda: {"mode": "current_shift"})
     analysis_options: AnalysisOptions = Field(default_factory=AnalysisOptions)
+    intervention: ScenarioIntervention | None = None
     raw_message: str
