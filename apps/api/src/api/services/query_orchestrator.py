@@ -7,7 +7,6 @@ from api.schemas.query import (
     ScenarioResponse,
 )
 from api.services.evidence_seed import load_rag_seed_chunks
-from api.services.explanation_builder import ExplanationBuilder
 from api.services.graph_repository import DemoGraphRepository, GraphRepository
 from api.services.reasoning_trace_builder import ReasoningTraceBuilder
 from api.services.scenario_orchestrator import ScenarioOrchestrator
@@ -15,9 +14,9 @@ from api.services.visualization_builder import VisualizationBuilder
 from causal_engine.analysis import find_dominant_paths
 from causal_engine.loops import detect_feedback_loops
 from causal_engine.models import CausalPath, FeedbackLoop
-from llm_orchestrator.chat import ChatResponder
+from llm_orchestrator.chat import AnalysisResponder, ChatResponder
 from llm_orchestrator.models import IntentType
-from llm_orchestrator.parsers import IntentParser
+from llm_orchestrator.parsers import IntentParser, IntentParserUnavailableError
 from rag_engine.mock import InMemoryRetriever
 from rag_engine.models import RetrievalQuery
 
@@ -28,11 +27,12 @@ class QueryOrchestrator:
         parser: IntentParser,
         graph_repository: GraphRepository | None = None,
         chat_responder: ChatResponder | None = None,
+        analysis_responder: AnalysisResponder | None = None,
     ) -> None:
         self._parser = parser
         self._graph_repository = graph_repository or DemoGraphRepository()
         self._chat_responder = chat_responder
-        self._explanation_builder = ExplanationBuilder()
+        self._analysis_responder = analysis_responder
         self._reasoning_trace_builder = ReasoningTraceBuilder()
         self._visualization_builder = VisualizationBuilder()
         self._scenario_orchestrator = ScenarioOrchestrator(self._graph_repository)
@@ -109,33 +109,11 @@ class QueryOrchestrator:
         return QueryResponse(
             analysis_id="analysis_demo_001",
             intent=structured_query.intent.value,
-            answer=(
-                _scenario_answer(scenario)
-                if scenario is not None
-                else self._explanation_builder.build(
-                    {
-                        **causal_result,
-                        "dominantPaths": [
-                            {
-                                "path": path.path,
-                                "contributionRatio": path.contribution_ratio,
-                                "signedImpact": path.signed_impact,
-                                "confidence": path.confidence,
-                            }
-                            for path in _top_reasoning_paths(paths)
-                        ],
-                        "feedbackLoops": [
-                            {
-                                "nodes": loop.nodes,
-                                "loopType": loop.loop_type,
-                                "strength": loop.strength,
-                                "confidence": loop.confidence,
-                            }
-                            for loop in _top_reasoning_loops(loops)
-                        ],
-                    },
-                    evidence,
-                )
+            answer=self._build_analysis_answer(
+                message=request.message,
+                causal_result=causal_result,
+                evidence=evidence,
+                scenario=scenario,
             ),
             causal_result=causal_result,
             evidence=evidence,
@@ -146,6 +124,23 @@ class QueryOrchestrator:
                 trace=reasoning_trace,
             ),
             scenario=scenario,
+        )
+
+    def _build_analysis_answer(
+        self,
+        *,
+        message: str,
+        causal_result: dict[str, object],
+        evidence: list[dict[str, object]],
+        scenario: ScenarioResponse | None,
+    ) -> str:
+        if self._analysis_responder is None:
+            raise IntentParserUnavailableError("Claude analysis responder is not configured")
+        return self._analysis_responder.respond_to_analysis(
+            message=message,
+            causal_result=causal_result,
+            evidence=evidence,
+            scenario=scenario.model_dump() if scenario is not None else None,
         )
 
     def _run_scenario(self, request: QueryRequest, message: str) -> ScenarioResponse:
@@ -234,18 +229,3 @@ def _percentage_from_message(message: str) -> float:
             if 0 < value <= 100:
                 return value / 100
     return 0.15
-
-
-def _scenario_answer(scenario: ScenarioResponse) -> str:
-    intervention = scenario.structured_intervention["interventions"]
-    first_intervention = intervention[0] if isinstance(intervention, list) else {}
-    node_id = (
-        first_intervention.get("node_id", "selected variable")
-        if isinstance(first_intervention, dict)
-        else "selected variable"
-    )
-    value = first_intervention.get("value", 0) if isinstance(first_intervention, dict) else 0
-    return (
-        f"Simulated a {float(value) * 100:.0f}% adjustment to {node_id}. "
-        "Review the impact card and highlighted causal path."
-    )

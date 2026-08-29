@@ -2,12 +2,14 @@
 
 import { FileText, Send } from "lucide-react";
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { submitCopilotQuery } from "@/lib/api";
 import type { EvidenceItem, QueryResponse } from "@/lib/types";
 import { AnalysisDetails } from "./AnalysisDetails";
 
 type Props = {
   onResponse?: (response: QueryResponse) => void;
+  onClearResponse?: () => void;
   onSelectEvidence?: (evidence: EvidenceItem) => void;
 };
 
@@ -16,7 +18,7 @@ const quickPrompts = [
   { label: "Simulate yard improvement", query: "What if yard density improves by 15%?" }
 ];
 
-export function CopilotPanel({ onResponse, onSelectEvidence }: Props) {
+export function CopilotPanel({ onResponse, onClearResponse, onSelectEvidence }: Props) {
   const [message, setMessage] = useState("Why is Vessel A productivity low?");
   const [answer, setAnswer] = useState(
     "Ask an operational question to inspect causal paths, evidence, and scenario impact."
@@ -32,6 +34,8 @@ export function CopilotPanel({ onResponse, onSelectEvidence }: Props) {
     }
 
     setIsLoading(true);
+    setAnalysis(null);
+    onClearResponse?.();
     setAnswer("Analyzing the causal graph...");
     try {
       const response = await submitCopilotQuery(trimmedMessage);
@@ -52,7 +56,7 @@ export function CopilotPanel({ onResponse, onSelectEvidence }: Props) {
         <span>Causal analysis</span>
       </div>
       <div className="answerBox" aria-live="polite">
-        <p>{answer}</p>
+        <ReactMarkdown>{answer}</ReactMarkdown>
         {analysis?.evidence.length ? (
           <div className="citationPills" aria-label="Grounded evidence">
             {analysis.evidence.map((item) => (

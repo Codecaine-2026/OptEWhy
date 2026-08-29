@@ -57,6 +57,12 @@ export function OperationsWorkspace() {
       <section className="mainGrid">
         <section className="copilotArea">
           <CopilotPanel
+            onClearResponse={() => {
+              setVisualization(null);
+              setScenario(null);
+              setScenarioExplanation("");
+              setSelectedEvidence(null);
+            }}
             onResponse={(response) => {
               setVisualization(response.visualization);
               setLoopIndex(0);

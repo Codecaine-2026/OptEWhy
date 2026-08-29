@@ -1,7 +1,7 @@
 from llm_orchestrator.chat import ChatResponder
+from llm_orchestrator.claude_chat import ClaudeChatResponder
+from llm_orchestrator.claude_parser import ClaudeIntentParser
 from llm_orchestrator.explanation import BackendGroundedExplanationBuilder
-from llm_orchestrator.gemini_chat import GeminiChatResponder
-from llm_orchestrator.gemini_parser import GeminiIntentParser
 from llm_orchestrator.models import AnalysisOptions, IntentType, StructuredQuery, Target
 from llm_orchestrator.parsers import (
     FallbackIntentParser,
@@ -23,8 +23,8 @@ __all__ = [
     "IntentType",
     "InvalidIntentTargetError",
     "MockIntentParser",
-    "GeminiChatResponder",
-    "GeminiIntentParser",
+    "ClaudeChatResponder",
+    "ClaudeIntentParser",
     "StructuredQuery",
     "Target",
 ]

@@ -198,7 +198,74 @@ input {
   background: #f7f9fa;
   line-height: 1.45;
   font-size: 14px;
-  white-space: pre-line;
+}
+
+.answerBox > :first-child {
+  margin-top: 0;
+}
+
+.answerBox > :last-child {
+  margin-bottom: 0;
+}
+
+.answerBox h1,
+.answerBox h2,
+.answerBox h3 {
+  margin: 14px 0 6px;
+  color: #1d3238;
+  line-height: 1.25;
+}
+
+.answerBox h1 {
+  font-size: 18px;
+}
+
+.answerBox h2 {
+  font-size: 16px;
+}
+
+.answerBox h3 {
+  font-size: 14px;
+}
+
+.answerBox p,
+.answerBox ul,
+.answerBox ol {
+  margin: 0 0 10px;
+}
+
+.answerBox ul,
+.answerBox ol {
+  padding-left: 20px;
+}
+
+.answerBox li + li {
+  margin-top: 4px;
+}
+
+.answerBox code {
+  border-radius: 4px;
+  padding: 1px 4px;
+  background: #e7eef0;
+  font-size: 0.9em;
+}
+
+.answerBox pre {
+  overflow: auto;
+  border-radius: 6px;
+  padding: 10px;
+  background: #1d3238;
+  color: #f3f7f8;
+}
+
+.answerBox pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.answerBox a {
+  color: #176c58;
+  font-weight: 700;
 }
 
 .analysisDetails {

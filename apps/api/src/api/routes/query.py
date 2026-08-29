@@ -28,7 +28,7 @@ def query(
     except IntentParserRateLimitError as exc:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Gemini API quota has been exhausted. Retry after the quota resets or check billing.",
+            detail="LLM API quota has been exhausted. Check the provider billing settings.",
             headers={"Retry-After": "20"},
         ) from exc
     except IntentParserUnavailableError as exc:

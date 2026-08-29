@@ -66,10 +66,10 @@ function startProcess(command, args, environment) {
 loadEnvFile();
 
 if (
-  (process.env.INTENT_PARSER_MODE ?? "gemini").toLowerCase() === "gemini" &&
-  !process.env.GEMINI_API_KEY?.trim()
+  (process.env.INTENT_PARSER_MODE ?? "claude").toLowerCase() === "claude" &&
+  !process.env.ANTHROPIC_API_KEY?.trim()
 ) {
-  console.error("GEMINI_API_KEY is required when INTENT_PARSER_MODE=gemini.");
+  console.error("ANTHROPIC_API_KEY is required when INTENT_PARSER_MODE=claude.");
   console.error("Add it to the repository .env file or set INTENT_PARSER_MODE=mock.");
   process.exit(1);
 }

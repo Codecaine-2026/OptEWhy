@@ -25,7 +25,7 @@ This installs Python development dependencies and frontend workspace dependencie
 
 ## Run Locally
 
-For the default Gemini parser, first copy `.env.example` to `.env` and set `GEMINI_API_KEY`.
+For the default Claude parser, first copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY`.
 
 Run the full local stack:
 
@@ -45,8 +45,8 @@ Run only the web app:
 make web
 ```
 
-The default Gemini structured-output parser is documented in
-[`docs/gemini-intent-parser.md`](docs/gemini-intent-parser.md).
+The default Claude structured-output parser is documented in
+[`docs/claude-intent-parser.md`](docs/claude-intent-parser.md).
 
 With `GRAPH_REPOSITORY_MODE=postgres` and `DATABASE_URL` configured, the graph, query, and
 scenario endpoints read graph and snapshot data from PostgreSQL. Seed the reference data with the command documented in

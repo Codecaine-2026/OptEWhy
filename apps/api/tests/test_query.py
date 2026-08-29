@@ -10,9 +10,25 @@ from llm_orchestrator.parsers import (
 )
 
 
+class GroundedAnalysisResponder:
+    def respond_to_analysis(
+        self,
+        *,
+        message: str,
+        causal_result: dict[str, object],
+        evidence: list[dict[str, object]],
+        scenario: dict[str, object] | None,
+    ) -> str:
+        assert message
+        assert causal_result
+        assert evidence
+        return "Claude-generated grounded analysis."
+
+
 def test_query_endpoint_returns_contract() -> None:
     app.dependency_overrides[get_query_orchestrator] = lambda: QueryOrchestrator(
-        parser=MockIntentParser()
+        parser=MockIntentParser(),
+        analysis_responder=GroundedAnalysisResponder(),
     )
     try:
         response = TestClient(app).post(
@@ -26,7 +42,7 @@ def test_query_endpoint_returns_contract() -> None:
     body = response.json()
     assert body["analysisId"] == "analysis_demo_001"
     assert body["causalResult"]["dominantPaths"][0]["contributionRatio"] > 0
-    assert "approximately 0%" not in body["answer"]
+    assert body["answer"] == "Claude-generated grounded analysis."
     assert body["evidence"]
     assert body["evidence"][0]["documentId"]
 
@@ -134,7 +150,7 @@ def test_query_endpoint_uses_chat_responder_for_greetings() -> None:
     }
 
 
-def test_query_endpoint_returns_503_when_gemini_parser_is_unavailable() -> None:
+def test_query_endpoint_returns_503_when_intent_parser_is_unavailable() -> None:
     app.dependency_overrides[get_query_orchestrator] = lambda: QueryOrchestrator(
         parser=FailingParser(IntentParserUnavailableError("offline"))
     )
@@ -167,7 +183,8 @@ def test_query_endpoint_returns_422_for_unsupported_target() -> None:
 
 def test_query_endpoint_runs_scenario_requests_inside_the_copilot_flow() -> None:
     app.dependency_overrides[get_query_orchestrator] = lambda: QueryOrchestrator(
-        parser=MockIntentParser()
+        parser=MockIntentParser(),
+        analysis_responder=GroundedAnalysisResponder(),
     )
     try:
         response = TestClient(app).post(

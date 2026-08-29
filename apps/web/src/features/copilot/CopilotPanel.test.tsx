@@ -16,7 +16,7 @@ beforeEach(() => {
 describe("CopilotPanel", () => {
   it("shows the answer returned by the backend", async () => {
     submitCopilotQueryMock.mockResolvedValue({
-      answer: "QC waiting is the strongest modeled driver.",
+      answer: "## Root cause\n\n**QC waiting** is the strongest modeled driver.\n\n- Review yard density\n- Check truck flow",
       intent: "root_mechanism_analysis",
       analysisId: "analysis_demo_001",
       causalResult: {
@@ -63,7 +63,9 @@ describe("CopilotPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send query" }));
 
     await waitFor(() => {
-      expect(screen.getByText("QC waiting is the strongest modeled driver.")).toBeTruthy();
+      expect(screen.getByRole("heading", { name: "Root cause" })).toBeTruthy();
+      expect(screen.getByText("QC waiting").tagName).toBe("STRONG");
+      expect(screen.getByText("Review yard density")).toBeTruthy();
     });
     expect(screen.getByText("Reasoning trace")).toBeTruthy();
     expect(screen.getAllByText("Yard operations report")).toHaveLength(2);
@@ -81,6 +83,7 @@ describe("CopilotPanel", () => {
     await waitFor(() => {
       expect(screen.getByText("Copilot backend is unavailable")).toBeTruthy();
     });
+    expect(screen.queryByText("Reasoning trace")).toBeNull();
   });
 
   it("shares the full analysis response with its parent", async () => {

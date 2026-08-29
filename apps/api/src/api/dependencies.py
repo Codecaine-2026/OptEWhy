@@ -1,9 +1,9 @@
 import os
 from functools import lru_cache
 
-from llm_orchestrator.chat import ChatResponder
-from llm_orchestrator.gemini_chat import GeminiChatResponder
-from llm_orchestrator.gemini_parser import GeminiIntentParser
+from llm_orchestrator.chat import AnalysisResponder, ChatResponder
+from llm_orchestrator.claude_chat import ClaudeChatResponder
+from llm_orchestrator.claude_parser import ClaudeIntentParser
 from llm_orchestrator.parsers import FallbackIntentParser, IntentParser, MockIntentParser
 
 from api.config import IntentParserMode, Settings
@@ -29,11 +29,11 @@ def get_intent_parser() -> IntentParser:
 
     graph = get_graph_repository().get_graph("terminal_alpha")
     node_catalog = {node.id: node.label for node in graph.nodes}
-    parser: IntentParser = GeminiIntentParser(
+    parser: IntentParser = ClaudeIntentParser(
         node_catalog=node_catalog,
-        model=settings.gemini_model,
-        api_key=settings.gemini_api_key,
-        timeout_seconds=settings.gemini_timeout_seconds,
+        model=settings.claude_model,
+        api_key=settings.anthropic_api_key,
+        timeout_seconds=settings.claude_timeout_seconds,
     )
     if settings.intent_parser_fallback_to_mock:
         parser = FallbackIntentParser(parser, MockIntentParser())
@@ -53,16 +53,19 @@ def get_graph_repository() -> GraphRepository:
 def get_query_orchestrator() -> QueryOrchestrator:
     settings = get_settings()
     chat_responder: ChatResponder | None = None
-    if settings.intent_parser_mode == IntentParserMode.GEMINI:
-        chat_responder = GeminiChatResponder(
-            model=settings.gemini_model,
-            api_key=settings.gemini_api_key,
-            timeout_seconds=settings.gemini_timeout_seconds,
+    analysis_responder: AnalysisResponder | None = None
+    if settings.intent_parser_mode == IntentParserMode.CLAUDE:
+        chat_responder = ClaudeChatResponder(
+            model=settings.claude_model,
+            api_key=settings.anthropic_api_key,
+            timeout_seconds=settings.claude_timeout_seconds,
         )
+        analysis_responder = chat_responder
     return QueryOrchestrator(
         parser=get_intent_parser(),
         graph_repository=get_graph_repository(),
         chat_responder=chat_responder,
+        analysis_responder=analysis_responder,
     )
 
 
