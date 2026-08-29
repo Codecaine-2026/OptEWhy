@@ -200,6 +200,25 @@ input {
   font-size: 14px;
 }
 
+.exportButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #1f8a70;
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: #ffffff;
+  color: #176c58;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.exportButton:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
 .answerBox > :first-child {
   margin-top: 0;
 }
@@ -266,6 +285,34 @@ input {
 .answerBox a {
   color: #176c58;
   font-weight: 700;
+}
+
+.pdfExportReport {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  width: 760px;
+  padding: 32px;
+  background: #ffffff;
+  color: #1d3238;
+  font-family: Arial, sans-serif;
+}
+
+.pdfExportReport h1,
+.pdfExportReport h2 {
+  color: #176c58;
+}
+
+.pdfExportReport section {
+  margin-top: 24px;
+}
+
+.pdfExportReport .analysisDetails {
+  max-height: none;
+}
+
+.pdfExportReport .causalCanvas {
+  max-width: 500px;
 }
 
 .analysisDetails {

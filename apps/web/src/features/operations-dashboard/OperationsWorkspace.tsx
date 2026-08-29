@@ -1,13 +1,16 @@
 "use client";
 
-import { Ship } from "lucide-react";
-import { useState } from "react";
+import { Download, Ship } from "lucide-react";
+import { useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { CausalMapCanvas } from "@/features/causal-map/CausalMapCanvas";
+import { AnalysisDetails } from "@/features/copilot/AnalysisDetails";
 import { CopilotPanel } from "@/features/copilot/CopilotPanel";
 import { EvidenceDrawer } from "@/features/evidence/EvidenceDrawer";
 import { ScenarioImpactTable } from "@/features/scenario-simulator/ScenarioImpactTable";
 import { causalEdges, causalNodes } from "@/lib/mockData";
-import type { EvidenceItem, ScenarioResponse, VisualizationPayload } from "@/lib/types";
+import { downloadElementAsPdf } from "@/lib/exportPdf";
+import type { EvidenceItem, QueryResponse, ScenarioResponse, VisualizationPayload } from "@/lib/types";
 
 export function OperationsWorkspace() {
   const [visualization, setVisualization] = useState<VisualizationPayload | null>(null);
@@ -15,6 +18,9 @@ export function OperationsWorkspace() {
   const [scenarioExplanation, setScenarioExplanation] = useState("");
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceItem | null>(null);
   const [loopIndex, setLoopIndex] = useState(0);
+  const [analysis, setAnalysis] = useState<QueryResponse | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const exportReportRef = useRef<HTMLDivElement>(null);
   const activeLoop = visualization?.loops[loopIndex] ?? null;
   const strongestPathNodeIds = visualization?.reasoningNodes
     .filter((node) => node.reasoningStepIds.includes("path_1"))
@@ -42,6 +48,18 @@ export function OperationsWorkspace() {
       })
     : [];
 
+  async function handleExport() {
+    if (!exportReportRef.current || !analysis) {
+      return;
+    }
+    setIsExporting(true);
+    try {
+      await downloadElementAsPdf(exportReportRef.current, "optewhy-reasoning-report.pdf");
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   return (
     <main className="workspace">
       <header className="topbar">
@@ -52,18 +70,26 @@ export function OperationsWorkspace() {
             <span>Port operations copilot</span>
           </div>
         </div>
+        {analysis ? (
+          <button type="button" className="exportButton" onClick={() => void handleExport()} disabled={isExporting}>
+            <Download size={15} />
+            {isExporting ? "Preparing PDF..." : "Export PDF"}
+          </button>
+        ) : null}
       </header>
 
       <section className="mainGrid">
         <section className="copilotArea">
           <CopilotPanel
             onClearResponse={() => {
+              setAnalysis(null);
               setVisualization(null);
               setScenario(null);
               setScenarioExplanation("");
               setSelectedEvidence(null);
             }}
             onResponse={(response) => {
+              setAnalysis(response);
               setVisualization(response.visualization);
               setLoopIndex(0);
               setScenario(response.scenario ?? null);
@@ -119,6 +145,31 @@ export function OperationsWorkspace() {
         evidence={selectedEvidence}
         onClose={() => setSelectedEvidence(null)}
       />
+      {analysis ? (
+        <div className="pdfExportReport" ref={exportReportRef} aria-hidden="true">
+          <header>
+            <h1>OptEWhy Reasoning Report</h1>
+            <p>{analysis.intent.replaceAll("_", " ")}</p>
+          </header>
+          <section>
+            <h2>AI analysis</h2>
+            <ReactMarkdown>{analysis.answer}</ReactMarkdown>
+          </section>
+          <section>
+            <h2>Reasoning trace</h2>
+            <AnalysisDetails evidence={analysis.evidence} reasoningTrace={analysis.reasoningTrace} />
+          </section>
+          <section>
+            <h2>Causal graph</h2>
+            <CausalMapCanvas
+              nodes={causalNodes}
+              edges={causalEdges}
+              highlightedNodeIds={activeNodeIds}
+              highlightedEdgeIds={activeEdgeIds}
+            />
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
