@@ -10,6 +10,7 @@ build/
 *.egg-info/
 node_modules/
 .next/
+.next-cache/
 coverage/
 *.log
 postgres-data/

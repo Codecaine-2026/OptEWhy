@@ -53,7 +53,9 @@ export function CopilotPanel({ onResponse, onClearResponse, onSelectEvidence }: 
   return (
     <section className="panel copilotPanel">
       <div className="panelHeader">
-        <h2>AI Copilot</h2>
+        <h2>
+          <img className="copilotLogo" src="/assets/optewhy-logo.png" alt="OptEWhy logo" />
+        </h2>
         <span>Causal analysis</span>
       </div>
       <div className="answerBox" aria-live="polite">

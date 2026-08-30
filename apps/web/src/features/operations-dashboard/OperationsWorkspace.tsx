@@ -1,7 +1,7 @@
 "use client";
 
 import { Download } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, type PointerEvent, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { CausalMapCanvas } from "@/features/causal-map/CausalMapCanvas";
@@ -25,6 +25,16 @@ import type {
 const graphColumns = 4;
 const graphColumnWidth = 190;
 const graphRowHeight = 82;
+const MIN_COLUMN_SPLIT = 25;
+const MAX_COLUMN_SPLIT = 75;
+const MIN_ROW_SPLIT = 35;
+const MAX_ROW_SPLIT = 80;
+
+type ResizeOrientation = "vertical" | "horizontal";
+
+function clamp(value: number, minimum: number, maximum: number) {
+  return Math.min(maximum, Math.max(minimum, value));
+}
 
 function layoutGraph(
   graph: GraphResponse,
@@ -197,6 +207,17 @@ export function OperationsWorkspace() {
   const [analysis, setAnalysis] = useState<QueryResponse | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState("");
+  const [columnSplit, setColumnSplit] = useState(50);
+  const [rowSplit, setRowSplit] = useState(68);
+  const [activeResize, setActiveResize] = useState<ResizeOrientation | null>(null);
+  const mainGridRef = useRef<HTMLElement>(null);
+  const workspaceContentRef = useRef<HTMLElement>(null);
+  const resizeRef = useRef<{
+    orientation: ResizeOrientation;
+    startPosition: number;
+    startSplit: number;
+    containerSize: number;
+  } | null>(null);
   const exportReportRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let isActive = true;
@@ -322,6 +343,85 @@ export function OperationsWorkspace() {
       ? scenario.predictedImpact[analysis.causalResult.targetNodeId]
       : null;
 
+  function startResize(orientation: ResizeOrientation, event: PointerEvent<HTMLDivElement>) {
+    const container = orientation === "vertical" ? mainGridRef.current : workspaceContentRef.current;
+    const containerSize = orientation === "vertical" ? container?.getBoundingClientRect().width : container?.getBoundingClientRect().height;
+    if (!container || !containerSize) {
+      return;
+    }
+
+    resizeRef.current = {
+      orientation,
+      startPosition: orientation === "vertical" ? event.clientX : event.clientY,
+      startSplit: orientation === "vertical" ? columnSplit : rowSplit,
+      containerSize
+    };
+    setActiveResize(orientation);
+    if (typeof event.currentTarget.setPointerCapture === "function") {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    event.preventDefault();
+  }
+
+  function moveResize(orientation: ResizeOrientation, event: PointerEvent<HTMLDivElement>) {
+    const resize = resizeRef.current;
+    if (!resize || resize.orientation !== orientation) {
+      return;
+    }
+
+    const currentPosition = orientation === "vertical" ? event.clientX : event.clientY;
+    const delta = ((currentPosition - resize.startPosition) / resize.containerSize) * 100;
+    const nextSplit = resize.startSplit + delta;
+    if (orientation === "vertical") {
+      setColumnSplit(clamp(nextSplit, MIN_COLUMN_SPLIT, MAX_COLUMN_SPLIT));
+    } else {
+      setRowSplit(clamp(nextSplit, MIN_ROW_SPLIT, MAX_ROW_SPLIT));
+    }
+  }
+
+  function stopResize(event: PointerEvent<HTMLDivElement>) {
+    if (
+      typeof event.currentTarget.hasPointerCapture === "function" &&
+      event.currentTarget.hasPointerCapture(event.pointerId) &&
+      typeof event.currentTarget.releasePointerCapture === "function"
+    ) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    resizeRef.current = null;
+    setActiveResize(null);
+  }
+
+  function resizeWithKeyboard(orientation: ResizeOrientation, event: KeyboardEvent<HTMLDivElement>) {
+    const isVertical = orientation === "vertical";
+    const currentSplit = isVertical ? columnSplit : rowSplit;
+    const minimum = isVertical ? MIN_COLUMN_SPLIT : MIN_ROW_SPLIT;
+    const maximum = isVertical ? MAX_COLUMN_SPLIT : MAX_ROW_SPLIT;
+    const step = 5;
+    let nextSplit: number | null = null;
+
+    if ((isVertical && event.key === "ArrowLeft") || (!isVertical && event.key === "ArrowUp")) {
+      nextSplit = currentSplit - step;
+    } else if ((isVertical && event.key === "ArrowRight") || (!isVertical && event.key === "ArrowDown")) {
+      nextSplit = currentSplit + step;
+    } else if (event.key === "Home") {
+      nextSplit = minimum;
+    } else if (event.key === "End") {
+      nextSplit = maximum;
+    }
+
+    if (nextSplit === null) {
+      return;
+    }
+
+    event.preventDefault();
+    const clampedSplit = clamp(nextSplit, minimum, maximum);
+    if (isVertical) {
+      setColumnSplit(clampedSplit);
+    } else {
+      setRowSplit(clampedSplit);
+    }
+  }
+
   async function handleExport() {
     if (!exportReportRef.current || !analysis) {
       return;
@@ -341,11 +441,7 @@ export function OperationsWorkspace() {
     <main className="workspace">
       <header className="topbar">
         <div className="brand">
-          <img className="brandLogo" src="/assets/PSA_logo.jpeg" alt="PSA logo" />
-          <div>
-            <strong>OptEWhy</strong>
-            <span>Port operations copilot</span>
-          </div>
+          <img className="brandLogo" src="/assets/PSA-Singapore-4K.png" alt="PSA Singapore" />
         </div>
         {analysis ? (
           <button type="button" className="exportButton" onClick={() => void handleExport()} disabled={isExporting}>
@@ -356,7 +452,22 @@ export function OperationsWorkspace() {
         {exportError ? <span className="exportError" role="alert">PDF export failed: {exportError}</span> : null}
       </header>
 
-      <section className="mainGrid">
+      <section
+        className="workspaceContent"
+        ref={workspaceContentRef}
+        style={
+          scenario
+            ? {
+                gridTemplateRows: `minmax(220px, ${rowSplit}fr) 10px minmax(160px, ${100 - rowSplit}fr)`
+              }
+            : undefined
+        }
+      >
+        <section
+          className="mainGrid"
+          ref={mainGridRef}
+          style={{ gridTemplateColumns: `minmax(0, ${columnSplit}fr) 10px minmax(0, ${100 - columnSplit}fr)` }}
+        >
         <section className="copilotArea">
           <CopilotPanel
             onClearResponse={() => {
@@ -374,6 +485,22 @@ export function OperationsWorkspace() {
             onSelectEvidence={setSelectedEvidence}
           />
         </section>
+
+        <div
+          className={`resizeHandle resizeHandle--vertical${activeResize === "vertical" ? " isActive" : ""}`}
+          role="separator"
+          aria-label="Resize Copilot and causal graph"
+          aria-orientation="vertical"
+          aria-valuemin={MIN_COLUMN_SPLIT}
+          aria-valuemax={MAX_COLUMN_SPLIT}
+          aria-valuenow={Math.round(columnSplit)}
+          tabIndex={0}
+          onKeyDown={(event) => resizeWithKeyboard("vertical", event)}
+          onPointerDown={(event) => startResize("vertical", event)}
+          onPointerMove={(event) => moveResize("vertical", event)}
+          onPointerUp={stopResize}
+          onPointerCancel={stopResize}
+        />
 
         <section className="mapPanel">
           <div className="mapHeader">
@@ -457,18 +584,36 @@ export function OperationsWorkspace() {
             </div>
           )}
         </section>
-      </section>
+        </section>
 
       {scenario ? (
-        <section className="bottomPanel">
-          <ScenarioImpactTable
-            rows={scenarioRows}
-            scenario={scenario}
-            reasoningTrace={analysis?.reasoningTrace ?? { targetNodeId: "", steps: [] }}
-            reasoningNodes={visualization?.reasoningNodes ?? []}
+        <>
+          <div
+            className={`resizeHandle resizeHandle--horizontal${activeResize === "horizontal" ? " isActive" : ""}`}
+            role="separator"
+            aria-label="Resize causal workspace and scenario list"
+            aria-orientation="horizontal"
+            aria-valuemin={MIN_ROW_SPLIT}
+            aria-valuemax={MAX_ROW_SPLIT}
+            aria-valuenow={Math.round(rowSplit)}
+            tabIndex={0}
+            onKeyDown={(event) => resizeWithKeyboard("horizontal", event)}
+            onPointerDown={(event) => startResize("horizontal", event)}
+            onPointerMove={(event) => moveResize("horizontal", event)}
+            onPointerUp={stopResize}
+            onPointerCancel={stopResize}
           />
-        </section>
+          <section className="bottomPanel">
+            <ScenarioImpactTable
+              rows={scenarioRows}
+              scenario={scenario}
+              reasoningTrace={analysis?.reasoningTrace ?? { targetNodeId: "", steps: [] }}
+              reasoningNodes={visualization?.reasoningNodes ?? []}
+            />
+          </section>
+        </>
       ) : null}
+      </section>
       <EvidenceDrawer
         isOpen={selectedEvidence !== null}
         evidence={selectedEvidence}

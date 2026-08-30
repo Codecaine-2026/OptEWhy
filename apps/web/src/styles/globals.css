@@ -34,7 +34,7 @@ input {
 
 .workspace {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
   height: 100dvh;
   overflow: hidden;
 }
@@ -42,6 +42,7 @@ input {
 .topbar {
   display: flex;
   align-items: center;
+  gap: 24px;
   padding: 10px 18px;
   background: #f6fbfa;
   border-bottom: 1px solid var(--border);
@@ -57,9 +58,11 @@ input {
 }
 
 .brandLogo {
-  width: 34px;
-  height: 34px;
-  object-fit: contain;
+  display: block;
+  width: 189px;
+  height: 22px;
+  object-fit: cover;
+  object-position: left center;
 }
 
 .brand strong {
@@ -74,13 +77,20 @@ input {
   font-size: 12px;
 }
 
-.mainGrid {
+.workspaceContent {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
   padding: 10px 12px;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 10px minmax(0, 1fr);
+  gap: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .copilotArea,
@@ -93,6 +103,71 @@ input {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 8px;
+}
+
+.resizeHandle {
+  position: relative;
+  z-index: 2;
+  border: 0;
+  border-radius: 4px;
+  padding: 0;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.resizeHandle::after {
+  position: absolute;
+  content: "";
+  border-radius: 999px;
+  background: var(--border);
+  transition: background 120ms ease, width 120ms ease, height 120ms ease;
+}
+
+.resizeHandle--vertical {
+  cursor: col-resize;
+}
+
+.resizeHandle--vertical::after {
+  top: 14px;
+  bottom: 14px;
+  left: 4px;
+  width: 2px;
+}
+
+.resizeHandle--horizontal {
+  cursor: row-resize;
+}
+
+.resizeHandle--horizontal::after {
+  top: 4px;
+  right: 14px;
+  left: 14px;
+  height: 2px;
+}
+
+.resizeHandle:hover::after,
+.resizeHandle:focus-visible::after,
+.resizeHandle.isActive::after {
+  background: var(--accent-blue);
+}
+
+.resizeHandle--vertical:hover::after,
+.resizeHandle--vertical:focus-visible::after,
+.resizeHandle--vertical.isActive::after {
+  width: 4px;
+}
+
+.resizeHandle--horizontal:hover::after,
+.resizeHandle--horizontal:focus-visible::after,
+.resizeHandle--horizontal.isActive::after {
+  height: 4px;
+}
+
+.resizeHandle:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -1px;
 }
 
 .mapHeader {
@@ -124,7 +199,7 @@ input {
 .impactTable {
   display: flex;
   flex-direction: column;
-  max-height: 20dvh;
+  height: 100%;
   min-height: 0;
   overflow: hidden;
 }
@@ -264,6 +339,14 @@ input {
 .panelHeader h2 {
   margin: 0;
   font-size: 15px;
+}
+
+.copilotLogo {
+  display: block;
+  width: 142px;
+  height: 47px;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .copilotPanel {
@@ -417,10 +500,10 @@ input {
 }
 
 .reportLogo {
-  width: 82px;
-  height: 54px;
-  object-fit: contain;
-  object-position: left top;
+  width: 110px;
+  height: 46px;
+  object-fit: fill;
+  object-position: left center;
 }
 
 .reportKicker,
@@ -745,7 +828,8 @@ textarea {
 }
 
 .bottomPanel {
-  padding: 0 12px 10px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 table {
@@ -843,8 +927,24 @@ th {
     overflow: visible;
   }
 
+  .workspaceContent {
+    display: block;
+    overflow: visible;
+    padding: 10px 12px;
+  }
+
   .mainGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+    overflow: visible;
+  }
+
+  .resizeHandle {
+    display: none;
+  }
+
+  .bottomPanel {
+    margin-top: 12px;
     overflow: visible;
   }
 

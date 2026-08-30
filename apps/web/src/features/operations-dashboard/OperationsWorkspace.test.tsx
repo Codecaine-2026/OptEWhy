@@ -25,9 +25,15 @@ describe("OperationsWorkspace", () => {
 
     render(<OperationsWorkspace />);
 
-    expect(screen.getByText("AI Copilot")).toBeTruthy();
+    expect(screen.getByAltText("OptEWhy logo")).toBeTruthy();
     expect(screen.getByText("Causal Graph")).toBeTruthy();
-    return waitFor(() => expect(screen.getByLabelText("26-node causal system map")).toBeTruthy());
+    return waitFor(() => {
+      expect(screen.getByLabelText("26-node causal system map")).toBeTruthy();
+      const splitter = screen.getByRole("separator", { name: "Resize Copilot and causal graph" });
+      expect(splitter.getAttribute("aria-valuenow")).toBe("50");
+      fireEvent.keyDown(splitter, { key: "ArrowRight" });
+      expect(splitter.getAttribute("aria-valuenow")).toBe("55");
+    });
   });
 
   it("shows a graph loading error when the backend graph cannot be loaded", async () => {
@@ -39,6 +45,28 @@ describe("OperationsWorkspace", () => {
     expect(screen.queryByText("Scenario Impact")).toBeNull();
     expect(screen.queryByText("Evidence")).toBeNull();
     expect(screen.queryByText("Scenario Composer")).toBeNull();
+  });
+
+  it("resizes the copilot and graph panes by dragging their splitter", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ graphId: "graph_test", terminalId: "terminal_alpha", nodes: [], edges: [] })
+      })
+    );
+
+    render(<OperationsWorkspace />);
+    const splitter = screen.getByRole("separator", { name: "Resize Copilot and causal graph" });
+    const mainGrid = splitter.parentElement as HTMLElement;
+    vi.spyOn(mainGrid, "getBoundingClientRect").mockReturnValue({ width: 1000 } as DOMRect);
+    expect(splitter.getAttribute("aria-valuenow")).toBe("50");
+
+    fireEvent.pointerDown(splitter, { pointerId: 1, clientX: 500, clientY: 300 });
+    fireEvent.pointerMove(splitter, { pointerId: 1, clientX: 600, clientY: 300 });
+    fireEvent.pointerUp(splitter, { pointerId: 1, clientX: 600, clientY: 300 });
+
+    await waitFor(() => expect(splitter.getAttribute("aria-valuenow")).not.toBe("50"));
   });
 
   it("shows the causal path to the most affected non-intervention node", async () => {
@@ -127,5 +155,9 @@ describe("OperationsWorkspace", () => {
       )
     ).toBe(true);
     expect(pathGraph.querySelector("text")?.textContent).not.toBe("Node 3");
+    const scenarioSplitter = screen.getByRole("separator", { name: "Resize causal workspace and scenario list" });
+    expect(scenarioSplitter.getAttribute("aria-valuenow")).toBe("68");
+    fireEvent.keyDown(scenarioSplitter, { key: "ArrowDown" });
+    expect(scenarioSplitter.getAttribute("aria-valuenow")).toBe("73");
   });
 });
